@@ -61,6 +61,7 @@ class ReaderViewModel(
     private val upscaler: KomeliaUpscaler?,
     val colorCorrectionIsActive: Flow<Boolean>,
 ) : ScreenModel {
+    val readingOffline = imageLoader.readingOffline
     val screenScaleState = ScreenScaleState()
     private val pageChangeFlow = MutableSharedFlow<Unit>(
         extraBufferCapacity = 1,

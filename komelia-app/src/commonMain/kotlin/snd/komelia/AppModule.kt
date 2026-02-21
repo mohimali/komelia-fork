@@ -222,7 +222,9 @@ abstract class AppModule {
             bookImageLoader = createReaderImageLoader(
                 bookApi = komgaNoRemoteCacheApi.map { it.bookApi }.stateIn(initScope),
                 imageFactory = readerImageFactory,
-                imageDecoder = createImageDecoder()
+                imageDecoder = createImageDecoder(),
+                offlineBookApi = offlineModule.komgaApi.bookApi,
+                isBookAvailableOffline = { bookId -> offlineRepositories.bookRepository.exists(bookId) },
             ),
             readerImageFactory = readerImageFactory,
             windowState = createWindowState(),
@@ -299,7 +301,9 @@ abstract class AppModule {
     protected fun createReaderImageLoader(
         bookApi: StateFlow<KomgaBookApi>,
         imageFactory: ReaderImageFactory,
-        imageDecoder: KomeliaImageDecoder
+        imageDecoder: KomeliaImageDecoder,
+        offlineBookApi: KomgaBookApi? = null,
+        isBookAvailableOffline: (suspend (snd.komga.client.book.KomgaBookId) -> Boolean)? = null,
     ): BookImageLoader {
         val diskCache = getReaderCacheDirectory()?.let { kotlinxPath ->
             DiskCache.Builder()
@@ -310,7 +314,9 @@ abstract class AppModule {
             bookClient = bookApi,
             readerImageFactory = imageFactory,
             imageDecoder = imageDecoder,
-            diskCache = diskCache
+            diskCache = diskCache,
+            offlineBookApi = offlineBookApi,
+            isBookAvailableOffline = isBookAvailableOffline,
         )
     }
 

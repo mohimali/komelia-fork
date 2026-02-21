@@ -152,6 +152,7 @@ class ImageReaderScreen(
             panelsReaderState = vm.panelsReaderState,
             screenScaleState = vm.screenScaleState,
             onnxRuntimeSettingsState = vm.onnxRuntimeSettingsState,
+            readingOffline = vm.readingOffline,
             isColorCorrectionActive = vm.colorCorrectionIsActive.collectAsState(false).value,
             onColorCorrectionClick = {
                 vm.readerState.booksState.value?.currentBook?.let { book ->

@@ -4,6 +4,7 @@ import coil3.disk.DiskCache
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import okio.FileSystem
 import okio.Path.Companion.toPath
@@ -18,8 +19,14 @@ class BookImageLoader(
     private val readerImageFactory: ReaderImageFactory,
     //TODO consider non coil disk cache implementation?
     val diskCache: DiskCache?,
+    private val offlineBookApi: KomgaBookApi? = null,
+    private val isBookAvailableOffline: (suspend (KomgaBookId) -> Boolean)? = null,
 ) {
     val fileSystem = diskCache?.fileSystem
+
+    /** True when the current book being loaded is served from offline storage */
+    private val _readingOffline = MutableStateFlow(false)
+    val readingOffline: StateFlow<Boolean> = _readingOffline
 
     suspend fun loadReaderImage(bookId: KomgaBookId, page: Int): ReaderImageResult {
         return try {
@@ -55,6 +62,33 @@ class BookImageLoader(
 
     private suspend fun doLoad(bookId: KomgaBookId, page: Int): ImageSource {
         val pageId = ReaderImage.PageId(bookId.value, page)
+
+        // Check if book is available offline — prefer local copy to avoid streaming
+        if (offlineBookApi != null && isBookAvailableOffline != null) {
+            try {
+                if (isBookAvailableOffline.invoke(bookId)) {
+                    val bytes = offlineBookApi.getPage(bookId, page)
+                    _readingOffline.value = true
+                    logger.debug { "Loading page $page of book ${bookId.value} from offline storage" }
+
+                    // Still cache to disk for fast re-reads
+                    if (diskCache != null) {
+                        val newSnapshot = writeToDiskCache(
+                            fileSystem = diskCache.fileSystem,
+                            cacheKey = pageId.toString(),
+                            bytes = bytes
+                        )
+                        if (newSnapshot != null) return ImageSource.FilePathSource(newSnapshot)
+                    }
+                    return ImageSource.MemorySource(bytes)
+                }
+            } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
+                logger.warn(e) { "Failed to load from offline storage, falling back to remote" }
+            }
+        }
+        _readingOffline.value = false
+
         if (diskCache == null) {
             val bytes: ByteArray = bookClient.value.getPage(bookId, page)
             return ImageSource.MemorySource(bytes)

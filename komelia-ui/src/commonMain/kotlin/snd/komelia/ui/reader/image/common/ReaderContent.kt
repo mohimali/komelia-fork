@@ -1,9 +1,17 @@
 package snd.komelia.ui.reader.image.common
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -29,6 +37,9 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import snd.komelia.settings.model.ReaderType.CONTINUOUS
 import snd.komelia.settings.model.ReaderType.PAGED
@@ -56,6 +67,7 @@ fun ReaderContent(
     panelsReaderState: PanelsReaderState?,
     onnxRuntimeSettingsState: OnnxRuntimeSettingsState?,
     screenScaleState: ScreenScaleState,
+    readingOffline: StateFlow<Boolean>? = null,
 
     isColorCorrectionActive: Boolean,
     onColorCorrectionClick: () -> Unit,
@@ -181,6 +193,39 @@ fun ReaderContent(
             flashWith = commonReaderState.flashWith.collectAsState().value,
             flashDuration = commonReaderState.flashDuration.collectAsState().value
         )
+
+        // Offline reading badge
+        if (readingOffline != null) {
+            val isOffline = readingOffline.collectAsState().value
+            var showBadge by remember { mutableStateOf(false) }
+            LaunchedEffect(isOffline) {
+                if (isOffline) {
+                    showBadge = true
+                    delay(4000)
+                    showBadge = false
+                } else {
+                    showBadge = false
+                }
+            }
+            AnimatedVisibility(
+                visible = showBadge,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)
+            ) {
+                Text(
+                    text = "\uD83D\uDCF1 Reading offline copy",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier
+                        .background(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
+                            RoundedCornerShape(8.dp)
+                        )
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+            }
+        }
     }
     LaunchedEffect(hasFocus) {
         if (!hasFocus) topLevelFocus.requestFocus()
