@@ -93,7 +93,7 @@ output archive will be in `./komelia-komf-extension/app/build/distributions`
 ## Custom Android APK Build (Windows — Full Walkthrough)
 
 This section documents the complete process for building a custom Komelia Android APK on Windows,
-including compiling native C/C++ libraries via Docker and signing the final APK.
+including compiling native C/C++ libraries via Docker, building the EPUB reader webui, and signing the final APK.
 
 ### Prerequisites
 
@@ -107,27 +107,18 @@ including compiling native C/C++ libraries via Docker and signing the final APK.
 git submodule update --init --recursive
 ```
 
-### Configurable Settings
+### Custom Modifications in This Fork
 
-Before building, you can tweak the page prefetch and cache settings in:
+This fork includes the following enhancements:
 
-```
-komelia-ui/src/commonMain/kotlin/snd/komelia/ui/reader/image/paged/PagedReaderState.kt
-```
+| Feature | Details |
+|---------|---------|
+| **Prefetch & Cache Settings** | Configurable via **Settings > Image Reader** (sliders for Prefetch Spread Count and Image Cache Size) |
+| **Offline Reading Priority** | When a book is downloaded for offline, the reader loads from the local copy instead of streaming |
+| **Offline Badge** | Shows "📱 Offline" badge in top-right of reader when reading from local copy |
+| **Image Card Size** | Minimum card size lowered from 150dp to 80dp (Settings > Appearance) |
 
-Look for the `companion object` at the top of the `PagedReaderState` class:
-
-```kotlin
-companion object {
-    const val PREFETCH_SPREAD_COUNT = 5   // spreads to prefetch ahead and behind
-    const val IMAGE_CACHE_SIZE = 30L      // max decoded pages kept in memory
-}
-```
-
-- **`PREFETCH_SPREAD_COUNT`** — Number of spreads loaded ahead/behind current page. Higher = faster
-  page turns but more memory. Default upstream is `1`, custom default is `5`.
-- **`IMAGE_CACHE_SIZE`** — Max decoded page images in memory. Should be ≥ `PREFETCH_SPREAD_COUNT * 2 + 1`.
-  Default upstream is `10`, custom default is `30`.
+All settings are persisted in the database and survive app restarts. No code editing needed.
 
 ### Step 1: Build Native Libraries via Docker
 
@@ -135,7 +126,7 @@ companion object {
 # Build the Docker image (one-time, ~10 min)
 docker build -t komelia-build-android . -f ./cmake/android.Dockerfile
 
-# Compile native libraries for arm64 (S23 Ultra, Pixel, etc.) (~30 min)
+# Compile native libraries for arm64 (S23 Ultra, Pixel, etc.) (~30 min first time)
 docker run -u root -v ${PWD}:/build komelia-build-android aarch64
 ```
 
@@ -149,29 +140,24 @@ docker run -u root -v ${PWD}:/build komelia-build-android aarch64
 docker run --entrypoint bash -u root -v ${PWD}:/build komelia-build-android -c './gradlew android-aarch64_copyJniLibs'
 ```
 
-### Step 3: Build the Release APK
+### Step 3: Build EPUB Reader WebUI + Release APK + Sign (All-in-One)
+
+This single command handles everything: builds the EPUB reader webuis (komga + ttu),
+copies them to compose resources, runs the Gradle release build, zipaligns, and signs.
 
 ```powershell
-# Create local.properties pointing to the Docker SDK path
-echo "sdk.dir=/android-sdk" > local.properties
-
-# Build the APK inside Docker
-docker run --entrypoint bash -u root -v ${PWD}:/build komelia-build-android -c './gradlew :komelia-app:assembleRelease'
+docker run --entrypoint bash -u root -v ${PWD}:/build komelia-build-android -c 'cd /build/komelia-epub-reader/komga-webui && npm ci && npm run build && cd /build/komelia-epub-reader/ttu-ebook-reader && npm ci && npm run build && mkdir -p /build/komelia-ui/src/commonMain/composeResources/files && cp /build/komelia-epub-reader/komga-webui/dist/* /build/komelia-ui/src/commonMain/composeResources/files/ && cp /build/komelia-epub-reader/ttu-ebook-reader/dist/* /build/komelia-ui/src/commonMain/composeResources/files/ && cd /build && ./gradlew :komelia-app:assembleRelease && /android-sdk/build-tools/35.0.0/zipalign -f -v -p 4 /build/komelia-app/build/outputs/apk/release/komelia-app-release-unsigned.apk /build/komelia-app/build/outputs/apk/release/komelia-app-release-aligned.apk && /android-sdk/build-tools/35.0.0/apksigner sign --ks /build/komelia-debug.keystore --ks-key-alias komelia --ks-pass pass:android --key-pass pass:android --out /build/komelia-app/build/outputs/apk/release/komelia-app-release.apk /build/komelia-app/build/outputs/apk/release/komelia-app-release-aligned.apk'
 ```
 
-### Step 4: Sign the APK
+### Step 3a: Generate Keystore (first time only)
 
-Android requires APK Signature Scheme v2/v3 (using `apksigner`, NOT `jarsigner`).
+If you don't already have `komelia-debug.keystore` in the project root:
 
 ```powershell
-# Generate a debug keystore (one-time only)
 docker run --entrypoint bash -u root -v ${PWD}:/build komelia-build-android -c 'keytool -genkeypair -v -keystore /build/komelia-debug.keystore -alias komelia -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Debug,OU=Debug,O=Debug,L=Debug,ST=Debug,C=US"'
-
-# Install build-tools, zipalign, and sign — all in one command
-docker run --entrypoint bash -u root -v ${PWD}:/build komelia-build-android -c '/android-sdk/cmdline-tools/latest/bin/sdkmanager "build-tools\;35.0.0" && /android-sdk/build-tools/35.0.0/zipalign -f -v -p 4 /build/komelia-app/build/outputs/apk/release/komelia-app-release-unsigned.apk /build/komelia-app/build/outputs/apk/release/komelia-app-release-aligned.apk && /android-sdk/build-tools/35.0.0/apksigner sign --ks /build/komelia-debug.keystore --ks-key-alias komelia --ks-pass pass:android --key-pass pass:android --out /build/komelia-app/build/outputs/apk/release/komelia-app-release.apk /build/komelia-app/build/outputs/apk/release/komelia-app-release-aligned.apk'
 ```
 
-### Step 5: Install
+### Step 4: Install
 
 The signed APK is at:
 
@@ -182,12 +168,29 @@ komelia-app/build/outputs/apk/release/komelia-app-release.apk
 Transfer this file to your Android device and install it. If updating from a different signing key,
 you must uninstall the old version first.
 
+### Build Timings (approximate)
+
+| Phase | Time |
+|-------|------|
+| komga-webui `npm ci` | ~4 min |
+| komga-webui `npm run build` | ~25 sec |
+| ttu-reader `npm ci` | ~2 min |
+| ttu-reader `npm run build` | ~40 sec |
+| Gradle configure | ~3 min |
+| Kotlin compile + R8 minify | ~15 min |
+| zipalign + apksigner | ~30 sec |
+| **Total (full rebuild)** | **~25 min** |
+
+> Incremental builds (code-only changes, no native lib changes) skip Step 1 and are ~20 min.
+
 ### Important Notes
 
 - **Keep the keystore:** Future updates must be signed with the **same** `komelia-debug.keystore`.
   If you lose it, you'll need to uninstall the app before installing a new build.
-- **Rebuilding after config changes:** If you only changed `PREFETCH_SPREAD_COUNT` or
-  `IMAGE_CACHE_SIZE`, you can skip Step 1 (native libs don't change). Just repeat Steps 3–5.
+- **Rebuilding after settings/code changes:** If you only changed Kotlin source code,
+  you can skip Step 1 (native libs don't change). Just repeat Step 3–4.
+- **EPUB reader:** The EPUB webui must be built at least once (included in Step 3).
+  On subsequent builds it's cached unless you clean the compose resources.
 - **Output files in the release directory:**
   - `komelia-app-release-unsigned.apk` — raw from Gradle (don't install)
   - `komelia-app-release-aligned.apk` — intermediate zipaligned (don't install)
