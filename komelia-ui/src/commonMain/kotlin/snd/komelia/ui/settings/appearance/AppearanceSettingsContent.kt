@@ -51,8 +51,8 @@ fun AppearanceSettingsContent(
         Slider(
             value = cardWidth.value,
             onValueChange = { onCardWidthChange(it.roundToInt().dp) },
-            steps = 19,
-            valueRange = 150f..350f,
+            steps = 27,
+            valueRange = 80f..350f,
             colors = AppSliderDefaults.colors(),
             modifier = Modifier.cursorForHand().padding(end = 20.dp),
         )
