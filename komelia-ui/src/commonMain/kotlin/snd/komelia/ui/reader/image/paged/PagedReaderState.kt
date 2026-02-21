@@ -65,27 +65,15 @@ class PagedReaderState(
     private val pageChangeFlow: MutableSharedFlow<Unit>,
     val screenScaleState: ScreenScaleState,
 ) {
-    companion object {
-        /**
-         * Number of spreads to prefetch ahead of and behind the current spread.
-         * Increase for faster page loading; decrease to save memory.
-         * Default: 5 (loads 5 spreads ahead + 5 behind = 11 total)
-         */
-        const val PREFETCH_SPREAD_COUNT = 5
-
-        /**
-         * Maximum number of decoded page images kept in memory cache.
-         * Should be at least (PREFETCH_SPREAD_COUNT * 2 + 1) to avoid evicting prefetched pages.
-         * Default: 30
-         */
-        const val IMAGE_CACHE_SIZE = 30L
-    }
-
     private val stateScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val pageLoadScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+    /** Configurable via Settings > Image Reader */
+    private var prefetchSpreadCount = 5
+    private var imageCacheSize = 30
+
     private val imageCache = Cache.Builder<PageId, Deferred<Page>>()
-        .maximumCacheSize(IMAGE_CACHE_SIZE)
+        .maximumCacheSize(100)
         .eventListener {
             val value = when (it) {
                 is Evicted -> it.value
@@ -111,6 +99,8 @@ class PagedReaderState(
     suspend fun initialize() {
         layout.value = settingsRepository.getPagedReaderDisplayLayout().first()
         scaleType.value = settingsRepository.getPagedReaderScaleType().first()
+        prefetchSpreadCount = settingsRepository.getPrefetchSpreadCount().first()
+        imageCacheSize = settingsRepository.getImageCacheSize().first()
         readingDirection.value = when (readerState.series.value?.metadata?.readingDirection) {
             KomgaReadingDirection.LEFT_TO_RIGHT -> LEFT_TO_RIGHT
             KomgaReadingDirection.RIGHT_TO_LEFT -> RIGHT_TO_LEFT
@@ -497,7 +487,7 @@ class PagedReaderState(
 
     private fun getSpreadLoadRange(spreadIndex: Int): IntRange {
         val spreads = pageSpreads.value
-        return (spreadIndex - PREFETCH_SPREAD_COUNT).coerceAtLeast(0)..(spreadIndex + PREFETCH_SPREAD_COUNT).coerceAtMost(spreads.size - 1)
+        return (spreadIndex - prefetchSpreadCount).coerceAtLeast(0)..(spreadIndex + prefetchSpreadCount).coerceAtMost(spreads.size - 1)
     }
 
     fun onLayoutChange(layout: PageDisplayLayout) {

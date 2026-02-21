@@ -78,4 +78,10 @@ interface ImageReaderSettingsRepository {
 
     fun getUpscalerOnnxModel(): Flow<PlatformFile?>
     suspend fun putUpscalerOnnxModel(name: PlatformFile?)
+
+    fun getPrefetchSpreadCount(): Flow<Int>
+    suspend fun putPrefetchSpreadCount(count: Int)
+
+    fun getImageCacheSize(): Flow<Int>
+    suspend fun putImageCacheSize(size: Int)
 }

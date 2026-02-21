@@ -51,6 +51,8 @@ class ImageReaderSettingsViewModel(
     val linearLightDownsampling = MutableStateFlow(false)
     val loadThumbnailsPreview = MutableStateFlow(false)
     val volumeKeysNavigation = MutableStateFlow(false)
+    val prefetchSpreadCount = MutableStateFlow(5)
+    val imageCacheSize = MutableStateFlow(30)
     val availableUpsamplingModes = availableUpsamplingModes()
     val availableDownsamplingKernels = availableReduceKernels()
 
@@ -62,6 +64,8 @@ class ImageReaderSettingsViewModel(
         linearLightDownsampling.value = settingsRepository.getLinearLightDownsampling().first()
         loadThumbnailsPreview.value = settingsRepository.getLoadThumbnailPreviews().first()
         volumeKeysNavigation.value = settingsRepository.getVolumeKeysNavigation().first()
+        prefetchSpreadCount.value = settingsRepository.getPrefetchSpreadCount().first()
+        imageCacheSize.value = settingsRepository.getImageCacheSize().first()
         onnxRuntimeSettingsState.initialize()
     }
 
@@ -88,6 +92,16 @@ class ImageReaderSettingsViewModel(
     fun onVolumeKeysNavigationChange(enable: Boolean) {
         volumeKeysNavigation.value = enable
         screenModelScope.launch { settingsRepository.putVolumeKeysNavigation(enable) }
+    }
+
+    fun onPrefetchSpreadCountChange(count: Int) {
+        prefetchSpreadCount.value = count
+        screenModelScope.launch { settingsRepository.putPrefetchSpreadCount(count) }
+    }
+
+    fun onImageCacheSizeChange(size: Int) {
+        imageCacheSize.value = size
+        screenModelScope.launch { settingsRepository.putImageCacheSize(size) }
     }
 
     fun onClearImageCache() {

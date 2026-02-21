@@ -194,4 +194,20 @@ class ReaderSettingsRepositoryWrapper(
     override suspend fun putUpscalerOnnxModel(name: PlatformFile?) {
         wrapper.transform { it.copy(ortUpscalerUserModelPath = name) }
     }
+
+    override fun getPrefetchSpreadCount(): Flow<Int> {
+        return wrapper.mapState { it.prefetchSpreadCount }
+    }
+
+    override suspend fun putPrefetchSpreadCount(count: Int) {
+        wrapper.transform { it.copy(prefetchSpreadCount = count) }
+    }
+
+    override fun getImageCacheSize(): Flow<Int> {
+        return wrapper.mapState { it.imageCacheSize }
+    }
+
+    override suspend fun putImageCacheSize(size: Int) {
+        wrapper.transform { it.copy(imageCacheSize = size) }
+    }
 }

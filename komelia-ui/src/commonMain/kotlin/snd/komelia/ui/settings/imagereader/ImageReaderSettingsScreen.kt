@@ -23,6 +23,11 @@ class ImageReaderSettingsScreen : Screen {
                 volumeKeysNavigation = vm.volumeKeysNavigation.collectAsState().value,
                 onVolumeKeysNavigationChange = vm::onVolumeKeysNavigationChange,
 
+                prefetchSpreadCount = vm.prefetchSpreadCount.collectAsState().value,
+                onPrefetchSpreadCountChange = vm::onPrefetchSpreadCountChange,
+                imageCacheSize = vm.imageCacheSize.collectAsState().value,
+                onImageCacheSizeChange = vm::onImageCacheSizeChange,
+
                 onCacheClear = vm::onClearImageCache,
                 onnxRuntimeSettingsState = vm.onnxRuntimeSettingsState,
             )

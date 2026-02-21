@@ -34,5 +34,8 @@ object ImageReaderSettingsTable : Table("ImageReaderSettings") {
     val ortUpscalerTileSize = integer("onnx_runtime_tile_size")
     val ortUpscalerUserModelPath = text("onnx_runtime_model_path").nullable()
 
+    val prefetchSpreadCount = integer("prefetch_spread_count")
+    val imageCacheSize = integer("image_cache_size")
+
     override val primaryKey = PrimaryKey(bookId)
 }

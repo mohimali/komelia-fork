@@ -39,4 +39,7 @@ data class ImageReaderSettings(
     val ortUpscalerUserModelPath: PlatformFile? = null,
     val ortUpscalerDeviceId: Int = 0,
     val ortUpscalerTileSize: Int = 512,
+
+    val prefetchSpreadCount: Int = 5,
+    val imageCacheSize: Int = 30,
 )

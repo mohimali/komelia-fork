@@ -53,6 +53,8 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                             ?.let { PlatformFile(it) },
                         ortUpscalerDeviceId = it[ImageReaderSettingsTable.ortDeviceId],
                         ortUpscalerTileSize = it[ImageReaderSettingsTable.ortUpscalerTileSize],
+                        prefetchSpreadCount = it[ImageReaderSettingsTable.prefetchSpreadCount],
+                        imageCacheSize = it[ImageReaderSettingsTable.imageCacheSize],
                     )
                 }
         }
@@ -84,6 +86,8 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                 it[ortUpscalerUserModelPath] = settings.ortUpscalerUserModelPath?.path
                 it[ortDeviceId] = settings.ortUpscalerDeviceId
                 it[ortUpscalerTileSize] = settings.ortUpscalerTileSize
+                it[prefetchSpreadCount] = settings.prefetchSpreadCount
+                it[imageCacheSize] = settings.imageCacheSize
             }
         }
     }
