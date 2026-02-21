@@ -38,7 +38,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import snd.komelia.settings.model.ReaderType.CONTINUOUS
@@ -194,35 +193,25 @@ fun ReaderContent(
             flashDuration = commonReaderState.flashDuration.collectAsState().value
         )
 
-        // Offline reading badge
+        // Offline reading badge — persistent while reading from local copy
         if (readingOffline != null) {
             val isOffline = readingOffline.collectAsState().value
-            var showBadge by remember { mutableStateOf(false) }
-            LaunchedEffect(isOffline) {
-                if (isOffline) {
-                    showBadge = true
-                    delay(4000)
-                    showBadge = false
-                } else {
-                    showBadge = false
-                }
-            }
             AnimatedVisibility(
-                visible = showBadge,
+                visible = isOffline,
                 enter = fadeIn(),
                 exit = fadeOut(),
-                modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)
+                modifier = Modifier.align(Alignment.TopEnd).padding(top = 52.dp, end = 8.dp)
             ) {
                 Text(
-                    text = "\uD83D\uDCF1 Reading offline copy",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    text = "\uD83D\uDCF1 Offline",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
                     modifier = Modifier
                         .background(
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
-                            RoundedCornerShape(8.dp)
+                            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.9f),
+                            RoundedCornerShape(12.dp)
                         )
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 )
             }
         }
