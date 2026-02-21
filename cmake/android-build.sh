@@ -19,6 +19,8 @@ fi
 
 TOOLCHAIN_PATH=$ANDROID_NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/
 
+find /build/cmake/external/patches -type f -name "*.patch" -exec sed -i 's/\r$//' {} +
+
 ARCH=$1
 ANDROID_ABI=""
 MESON_CROSS_CPU_FAMILY=""
@@ -73,9 +75,9 @@ case "$1" in
             exit;;
 esac
 
-rm -rf ./cmake/build-android-"$ARCH"
-mkdir -p ./cmake/build-android-"$ARCH"/sysroot
-cd ./cmake/build-android-"$ARCH"
+rm -rf /tmp/build-android-"$ARCH"
+mkdir -p /tmp/build-android-"$ARCH"/sysroot
+cd /tmp/build-android-"$ARCH"
 
 
 SYSROOT="$(readlink -f .)/sysroot"
@@ -123,7 +125,7 @@ CMAKE_FIND_ROOT_PATH_MODE_INCLUDE  = 'ONLY'
 CMAKE_FIND_ROOT_PATH_MODE_PACKAGE  = 'ONLY'
 EOF
 
-cmake ../.. -G Ninja \
+cmake /build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_SYSTEM_NAME=Android \
     -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_PATH/build/cmake/android.toolchain.cmake" \
@@ -142,3 +144,6 @@ cp "$CLANG_LIBOMP_PATH" ./sysroot/lib
 for lib in sysroot/lib/*so; do
     [[ -f $lib && ! -h $lib ]] && "$TOOLCHAIN_PATH"/bin/llvm-strip "$lib"
 done
+
+mkdir -p /build/cmake
+cp -r /tmp/build-android-"$ARCH" /build/cmake/
