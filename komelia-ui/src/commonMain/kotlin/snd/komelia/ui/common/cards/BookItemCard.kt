@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.OfflinePin
@@ -167,6 +168,7 @@ private fun BookImageOverlay(
 
                 Spacer(Modifier.weight(1f))
                 if (book.readProgress == null) BookUnreadTick()
+                else if (book.readProgress?.completed == true) BookReadCheckmark()
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -256,6 +258,18 @@ private fun BookUnreadTick() {
             path = trianglePath
         )
     }
+}
+
+@Composable
+private fun BookReadCheckmark() {
+    Icon(
+        imageVector = Icons.Filled.CheckCircle,
+        contentDescription = "Read",
+        tint = Color(0xFF4CAF50),
+        modifier = Modifier
+            .padding(2.dp)
+            .size(24.dp)
+    )
 }
 
 @Composable
