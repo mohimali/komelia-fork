@@ -16,3 +16,9 @@ build/
 /output
 /.kotlin
 /cmake/build*
+
+# Custom APK build / generated files
+*.keystore
+**/jniLibs/
+komelia-ui/src/commonMain/composeResources/files/
+komelia-app/bin/jvmMain/
