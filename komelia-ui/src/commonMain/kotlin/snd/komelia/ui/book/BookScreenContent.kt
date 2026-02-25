@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
@@ -112,13 +113,37 @@ fun BookScreenContent(
                 horizontalAlignment = Alignment.Start
             ) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
-                    BookThumbnail(
-                        book.id,
-                        modifier = Modifier
-                            .heightIn(min = 100.dp, max = 400.dp)
-                            .widthIn(min = 300.dp, max = 500.dp)
-                            .animateContentSize()
-                    )
+                    Box {
+                        BookThumbnail(
+                            book.id,
+                            modifier = Modifier
+                                .heightIn(min = 100.dp, max = 400.dp)
+                                .widthIn(min = 300.dp, max = 500.dp)
+                                .animateContentSize()
+                        )
+                        if (book.readProgress?.completed == true) {
+                            Icon(
+                                imageVector = Icons.Filled.CheckCircle,
+                                contentDescription = "Read",
+                                tint = androidx.compose.ui.graphics.Color(0xFF4CAF50),
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(4.dp)
+                                    .size(36.dp)
+                            )
+                        } else if (book.readProgress == null) {
+                            val color = MaterialTheme.colorScheme.tertiary
+                            androidx.compose.foundation.Canvas(modifier = Modifier.align(Alignment.TopEnd).size(40.dp)) {
+                                val trianglePath = androidx.compose.ui.graphics.Path().apply {
+                                    moveTo(0f, 0f)
+                                    lineTo(x = size.width, y = size.height)
+                                    lineTo(x = size.width, y = size.height)
+                                    lineTo(x = size.width, y = 0f)
+                                }
+                                drawPath(color = color, path = trianglePath)
+                            }
+                        }
+                    }
                     BookMainInfo(
                         book = book,
                         library = library,
