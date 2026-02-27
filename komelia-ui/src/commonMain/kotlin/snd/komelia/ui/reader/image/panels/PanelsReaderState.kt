@@ -347,10 +347,10 @@ class PanelsReaderState(
     }
 
     fun jumpToPage(page: Int) {
-        if (currentPageIndex.value.page == page) return
         pageChangeFlow.tryEmit(Unit)
         val pageNumber = page + 1
         stateScope.launch { readerState.onProgressChange(pageNumber) }
+        currentPageIndex.update { it.copy(page = page) }
         pageNavigationEvents.tryEmit(PageNavigationEvent.Immediate(page))
         launchPageLoad(page)
     }
