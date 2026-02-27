@@ -234,8 +234,7 @@ fun ImmersiveBookContent(
                                 Column(
                                     modifier = Modifier.padding(start = thumbnailOffset)
                                 ) {
-                                    val headlineFs = MaterialTheme.typography.headlineMedium.fontSize.value
-                                    // Line 1: Series · #N (2/3 headlineMedium, bold) — tappable link
+                                    // Line 1: Series · #N (headlineSmall, bold) — tappable link
                                     Row(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(4.dp))
@@ -246,8 +245,7 @@ fun ImmersiveBookContent(
                                     ) {
                                         Text(
                                             text = "${pageBook.seriesTitle} · #${pageBook.metadata.number}",
-                                            style = MaterialTheme.typography.headlineMedium.copy(
-                                                fontSize = (headlineFs * 2f / 3f).sp,
+                                            style = MaterialTheme.typography.headlineSmall.copy(
                                                 fontWeight = FontWeight.Bold,
                                             ),
                                             color = MaterialTheme.colorScheme.primary,
@@ -259,15 +257,15 @@ fun ImmersiveBookContent(
                                             tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
                                         )
                                     }
-                                    // Line 2: Book title (bodySmall) — only if different from series title
+                                    // Line 2: Book title (titleMedium) — only if different from series title
                                     if (pageBook.metadata.title != pageBook.seriesTitle) {
                                         Text(
                                             text = pageBook.metadata.title,
-                                            style = MaterialTheme.typography.bodySmall,
+                                            style = MaterialTheme.typography.titleMedium,
                                             modifier = Modifier.padding(top = 2.dp),
                                         )
                                     }
-                                    // Line 3: Writers (year) — 10 sp
+                                    // Line 3: Writers (year) — labelSmall
                                     val writers = remember(pageBook.metadata.authors) {
                                         pageBook.metadata.authors
                                             .filter { it.role.lowercase() == "writer" }
@@ -284,7 +282,7 @@ fun ImmersiveBookContent(
                                     if (writersYearText.isNotEmpty()) {
                                         Text(
                                             text = writersYearText,
-                                            fontSize = 10.sp,
+                                            style = MaterialTheme.typography.labelSmall,
                                             modifier = Modifier.padding(top = 2.dp),
                                         )
                                     }

@@ -64,7 +64,7 @@ fun SeriesDescriptionRow(
     ) {
 
         if (showReleaseYear && releaseDate != null)
-            Text("Release Year: ${releaseDate.year}", fontSize = 10.sp)
+            Text("Release Year: ${releaseDate.year}", style = MaterialTheme.typography.labelSmall)
 
         FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ElevatedButton(
@@ -141,7 +141,7 @@ fun SeriesDescriptionRow(
         if (alternateTitles.isNotEmpty()) {
             SelectionContainer {
                 Column {
-                    Text("Alternative titles", fontWeight = FontWeight.Bold)
+                    Text("Alternative titles", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     alternateTitles.forEach {
                         Row {
                             Text(

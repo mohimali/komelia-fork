@@ -253,7 +253,7 @@ fun ImmersiveDetailScaffold(
         val statusBarDp = LocalRawStatusBarHeight.current
         val statusBarPx = with(density) { statusBarDp.toPx() }
 
-        Box(modifier = Modifier.fillMaxSize().background(backgroundColor)) {
+        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
 
             // Layer 1: Cover image — fades out as card expands
             // Extends by the card corner radius so it fills behind the rounded corners
@@ -285,7 +285,7 @@ fun ImmersiveDetailScaffold(
                     .height(screenHeight)
                     .nestedScroll(nestedScrollConnection)
                     .anchoredDraggable(state, Orientation.Vertical)
-                    .shadow(elevation = 2.dp, shape = cardShape)
+                    .shadow(elevation = 6.dp, shape = cardShape)
                     .clip(cardShape)
                     .background(backgroundColor)
             ) {

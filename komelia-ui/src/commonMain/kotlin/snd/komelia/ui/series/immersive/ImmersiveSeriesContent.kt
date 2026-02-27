@@ -272,10 +272,7 @@ fun ImmersiveSeriesContent(
                         Column(modifier = Modifier.padding(start = thumbnailOffset)) {
                             Text(
                                 text = series.metadata.title,
-                                style = MaterialTheme.typography.headlineMedium.copy(
-                                    fontSize = (MaterialTheme.typography.headlineMedium.fontSize.value * 2f / 3f).sp,
-                                    fontWeight = FontWeight.Bold,
-                                ),
+                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                             )
                             val writers = remember(series.booksMetadata.authors) {
                                 series.booksMetadata.authors
@@ -290,7 +287,7 @@ fun ImmersiveSeriesContent(
                             if (writersYearText.isNotEmpty()) {
                                 Text(
                                     text = writersYearText,
-                                    fontSize = 10.sp,
+                                    style = MaterialTheme.typography.labelSmall,
                                     modifier = Modifier.padding(top = 2.dp),
                                 )
                             }

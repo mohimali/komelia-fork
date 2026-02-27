@@ -195,16 +195,14 @@ fun ImmersiveOneshotContent(
                             }
 
                             Column(modifier = Modifier.padding(start = thumbnailOffset)) {
-                                val headlineFs = MaterialTheme.typography.headlineMedium.fontSize.value
-                                // Book title (2/3 headlineMedium, bold)
+                                // Book title (headlineSmall, bold)
                                 Text(
                                     text = book.metadata.title,
-                                    style = MaterialTheme.typography.headlineMedium.copy(
-                                        fontSize = (headlineFs * 2f / 3f).sp,
+                                    style = MaterialTheme.typography.headlineSmall.copy(
                                         fontWeight = FontWeight.Bold,
                                     ),
                                 )
-                                // Writers (year) — 10 sp
+                                // Writers (year) — labelSmall
                                 val writers = remember(book.metadata.authors) {
                                     book.metadata.authors
                                         .filter { it.role.lowercase() == "writer" }
@@ -221,7 +219,7 @@ fun ImmersiveOneshotContent(
                                 if (writersYearText.isNotEmpty()) {
                                     Text(
                                         text = writersYearText,
-                                        fontSize = 10.sp,
+                                        style = MaterialTheme.typography.labelSmall,
                                         modifier = Modifier.padding(top = 2.dp),
                                     )
                                 }
