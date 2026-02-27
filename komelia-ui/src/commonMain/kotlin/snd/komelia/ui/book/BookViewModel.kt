@@ -58,6 +58,7 @@ class BookViewModel(
         private set
     val book = MutableStateFlow(book)
     private val currentBookId = MutableStateFlow(bookId)
+    var isExpanded by mutableStateOf(false)
 
     private val reloadEventsEnabled = MutableStateFlow(true)
     private val reloadJobsFlow = MutableSharedFlow<Unit>(1, 0, DROP_OLDEST)

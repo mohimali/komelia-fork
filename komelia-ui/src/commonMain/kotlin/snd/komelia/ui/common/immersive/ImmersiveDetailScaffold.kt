@@ -2,7 +2,6 @@ package snd.komelia.ui.common.immersive
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.AnimationVector
 import androidx.compose.animation.core.CubicBezierEasing
@@ -39,15 +38,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -183,8 +179,6 @@ fun ImmersiveDetailScaffold(
         val cardOffsetPx = if (state.offset.isNaN()) collapsedOffsetPx else state.offset
         val expandFraction = (1f - cardOffsetPx / collapsedOffsetPx).coerceIn(0f, 1f)
 
-        var innerScrollPx by rememberSaveable { mutableFloatStateOf(0f) }
-
         // Snap already-composed pages (e.g. adjacent in a pager) when the parent changes the
         // shared expand state. Skips the snap if the card is already in the right position.
         LaunchedEffect(initiallyExpanded) {
@@ -198,14 +192,13 @@ fun ImmersiveDetailScaffold(
         LaunchedEffect(state.currentValue) {
             savedExpanded = state.currentValue == CardDragValue.EXPANDED
             onExpandChange(savedExpanded)
-            if (state.currentValue == CardDragValue.COLLAPSED) innerScrollPx = 0f
         }
 
         val nestedScrollConnection = remember(state) {
             object : NestedScrollConnection {
                 override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                    val currentOffset = if (state.offset.isNaN()) collapsedOffsetPx else state.offset
                     val delta = available.y
+                    val currentOffset = if (state.offset.isNaN()) collapsedOffsetPx else state.offset
                     return if (delta < 0 && currentOffset > 0f) {
                         state.dispatchRawDelta(delta)
                         Offset(0f, delta)
@@ -215,10 +208,8 @@ fun ImmersiveDetailScaffold(
                 }
 
                 override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-                    innerScrollPx = (innerScrollPx - consumed.y).coerceAtLeast(0f)
-
                     val delta = available.y
-                    return if (delta > 0 && source == NestedScrollSource.UserInput && innerScrollPx <= 0f) {
+                    return if (delta > 0 && source == NestedScrollSource.UserInput) {
                         val cardConsumed = state.dispatchRawDelta(delta)
                         Offset(0f, cardConsumed)
                     } else Offset.Zero
@@ -293,7 +284,7 @@ fun ImmersiveDetailScaffold(
                     .fillMaxWidth()
                     .height(screenHeight)
                     .nestedScroll(nestedScrollConnection)
-                    .anchoredDraggable(state, Orientation.Vertical, enabled = innerScrollPx <= 0f)
+                    .anchoredDraggable(state, Orientation.Vertical)
                     .shadow(elevation = 2.dp, shape = cardShape)
                     .clip(cardShape)
                     .background(backgroundColor)
@@ -311,40 +302,6 @@ fun ImmersiveDetailScaffold(
                 }
                 Column(modifier = Modifier.fillMaxWidth().weight(1f)) {
                     cardContent(expandFraction)
-                }
-            }
-
-            // Layer 3: Thumbnail — fades in as card expands, moves with the card
-            // Positioned at card top + drag handle (28dp) + small gap (8dp), left-aligned with 16dp margin
-            val thumbAlpha = (expandFraction * 2f - 1f).coerceIn(0f, 1f)
-            // Clip container: top edge sits at status bar bottom; clipToBounds hides thumbnail above it
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(screenHeight - statusBarDp)
-                    .offset { IntOffset(0, statusBarPx.roundToInt()) }
-                    .clipToBounds()
-            ) {
-                Box(
-                    modifier = Modifier
-                        .offset {
-                            IntOffset(
-                                x = with(density) { 16.dp.toPx() }.roundToInt(),
-                                y = (cardOffsetPx + with(density) { (28.dp + 20.dp).toPx() } - innerScrollPx - statusBarPx)
-                                    .roundToInt()
-                            )
-                        }
-                        .graphicsLayer { alpha = thumbAlpha }
-                ) {
-                    ThumbnailImage(
-                        data = coverData,
-                        cacheKey = coverKey,
-                        crossfade = false,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(width = 110.dp, height = (110.dp / 0.703f))
-                            .clip(RoundedCornerShape(8.dp))
-                    )
                 }
             }
 

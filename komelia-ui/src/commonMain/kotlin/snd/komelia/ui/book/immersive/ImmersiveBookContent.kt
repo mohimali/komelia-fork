@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -63,6 +64,7 @@ import snd.komelia.DefaultDateTimeFormats.localDateTimeFormat
 import snd.komelia.image.coil.BookDefaultThumbnailRequest
 import snd.komelia.komga.api.model.KomeliaBook
 import snd.komelia.ui.book.BookInfoColumn
+import snd.komelia.ui.common.images.ThumbnailImage
 import snd.komelia.ui.common.immersive.ImmersiveDetailFab
 import snd.komelia.ui.common.immersive.ImmersiveDetailScaffold
 import snd.komelia.ui.common.menus.BookActionsMenu
@@ -94,6 +96,8 @@ fun ImmersiveBookContent(
     cardWidth: Dp,
     onSeriesClick: (KomgaSeriesId) -> Unit,
     onBookChange: (KomeliaBook) -> Unit = {},
+    initiallyExpanded: Boolean,
+    onExpandChange: (Boolean) -> Unit,
 ) {
     val initialPage = remember(siblingBooks, book) {
         siblingBooks.indexOfFirst { it.id == book.id }.coerceAtLeast(0)
@@ -125,7 +129,6 @@ fun ImmersiveBookContent(
     }
 
     var showDownloadConfirmationDialog by remember { mutableStateOf(false) }
-    var sharedExpanded by remember { mutableStateOf(false) }
 
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
@@ -171,8 +174,8 @@ fun ImmersiveBookContent(
                 coverKey = pageBook.id.value,
                 cardColor = accentColor,
                 immersive = true,
-                initiallyExpanded = sharedExpanded,
-                onExpandChange = { sharedExpanded = it },
+                initiallyExpanded = initiallyExpanded,
+                onExpandChange = onExpandChange,
                 topBarContent = {},  // Fixed overlay handles this
                 fabContent = {},     // Fixed overlay handles this
                 cardContent = { expandFraction ->
@@ -205,12 +208,32 @@ fun ImmersiveBookContent(
                                     .fillMaxWidth()
                                     .heightIn(min = (thumbnailTopGap + thumbnailHeight) * expandFraction)
                                     .padding(
-                                        start = thumbnailOffset + 16.dp,
+                                        start = 16.dp,
                                         end = 16.dp,
                                         top = lerp(8f, thumbnailTopGap.value, expandFraction).dp,
                                     )
                             ) {
-                                Column {
+                                if (expandFraction > 0.01f) {
+                                    Box(
+                                        modifier = Modifier
+                                            .padding(top = (thumbnailTopGap - 8.dp) * expandFraction)
+                                            .graphicsLayer { alpha = (expandFraction * 2f - 1f).coerceIn(0f, 1f) }
+                                    ) {
+                                        ThumbnailImage(
+                                            data = coverData,
+                                            cacheKey = pageBook.id.value,
+                                            crossfade = false,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .size(width = 110.dp, height = thumbnailHeight)
+                                                .clip(RoundedCornerShape(8.dp))
+                                        )
+                                    }
+                                }
+
+                                Column(
+                                    modifier = Modifier.padding(start = thumbnailOffset)
+                                ) {
                                     val headlineFs = MaterialTheme.typography.headlineMedium.fontSize.value
                                     // Line 1: Series · #N (2/3 headlineMedium, bold) — tappable link
                                     Row(

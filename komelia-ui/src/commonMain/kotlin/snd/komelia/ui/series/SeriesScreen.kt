@@ -107,6 +107,8 @@ class SeriesScreen(
                 },
                 onBackClick = { onBackPress(navigator, series.libraryId) },
                 onDownload = vm::onDownload,
+                initiallyExpanded = vm.isExpanded,
+                onExpandChange = { vm.isExpanded = it }
             )
 
             BackPressHandler { onBackPress(navigator, series.libraryId) }

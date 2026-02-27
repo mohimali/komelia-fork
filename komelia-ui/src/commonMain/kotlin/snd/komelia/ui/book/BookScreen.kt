@@ -106,6 +106,8 @@ class BookScreen(
                 cardWidth = vm.cardWidth.collectAsState().value,
                 onSeriesClick = { seriesId -> navigator.push(SeriesScreen(seriesId)) },
                 onBookChange = vm::setCurrentBook,
+                initiallyExpanded = vm.isExpanded,
+                onExpandChange = { vm.isExpanded = it }
             )
             BackPressHandler { onBackPress(navigator, book.seriesId) }
             return

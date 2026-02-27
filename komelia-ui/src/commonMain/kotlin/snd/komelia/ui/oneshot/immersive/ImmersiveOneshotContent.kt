@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.MoreVert
@@ -40,8 +41,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -58,6 +61,7 @@ import snd.komelia.image.coil.SeriesDefaultThumbnailRequest
 import kotlin.math.roundToInt
 import snd.komelia.komga.api.model.KomeliaBook
 import snd.komelia.ui.book.BookInfoColumn
+import snd.komelia.ui.common.images.ThumbnailImage
 import snd.komelia.ui.common.immersive.ImmersiveDetailFab
 import snd.komelia.ui.common.immersive.ImmersiveDetailScaffold
 import snd.komelia.ui.common.menus.BookMenuActions
@@ -95,6 +99,8 @@ fun ImmersiveOneshotContent(
     onBookDownload: () -> Unit,
     cardWidth: Dp,
     onBackClick: () -> Unit,
+    initiallyExpanded: Boolean,
+    onExpandChange: (Boolean) -> Unit,
 ) {
     var showDownloadConfirmationDialog by remember { mutableStateOf(false) }
 
@@ -131,6 +137,8 @@ fun ImmersiveOneshotContent(
             coverKey = series.id.value,
             cardColor = accentColor,
             immersive = true,
+            initiallyExpanded = initiallyExpanded,
+            onExpandChange = onExpandChange,
             topBarContent = {},   // Fixed overlay handles this
             fabContent = {},      // Fixed overlay handles this
             cardContent = { expandFraction ->
@@ -163,12 +171,30 @@ fun ImmersiveOneshotContent(
                                 .fillMaxWidth()
                                 .heightIn(min = (thumbnailTopGap + thumbnailHeight) * expandFraction)
                                 .padding(
-                                    start = thumbnailOffset + 16.dp,
+                                    start = 16.dp,
                                     end = 16.dp,
                                     top = lerp(8f, thumbnailTopGap.value, expandFraction).dp,
                                 )
                         ) {
-                            Column {
+                            if (expandFraction > 0.01f) {
+                                Box(
+                                    modifier = Modifier
+                                        .padding(top = (thumbnailTopGap - 8.dp) * expandFraction)
+                                        .graphicsLayer { alpha = (expandFraction * 2f - 1f).coerceIn(0f, 1f) }
+                                ) {
+                                    ThumbnailImage(
+                                        data = SeriesDefaultThumbnailRequest(series.id),
+                                        cacheKey = series.id.value,
+                                        crossfade = false,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(width = 110.dp, height = thumbnailHeight)
+                                            .clip(RoundedCornerShape(8.dp))
+                                    )
+                                }
+                            }
+
+                            Column(modifier = Modifier.padding(start = thumbnailOffset)) {
                                 val headlineFs = MaterialTheme.typography.headlineMedium.fontSize.value
                                 // Book title (2/3 headlineMedium, bold)
                                 Text(

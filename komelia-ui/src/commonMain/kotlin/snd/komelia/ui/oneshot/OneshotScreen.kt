@@ -118,6 +118,8 @@ class OneshotScreen(
                 onBookDownload = vm::onBookDownload,
                 cardWidth = vm.cardWidth.collectAsState().value,
                 onBackClick = { onBackPress(navigator, vmSeries.libraryId) },
+                initiallyExpanded = vm.isExpanded,
+                onExpandChange = { vm.isExpanded = it }
             )
             BackPressHandler { onBackPress(navigator, vmSeries.libraryId) }
             return

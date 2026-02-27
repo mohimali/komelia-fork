@@ -37,6 +37,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,9 +49,12 @@ import snd.komelia.ui.LoadState
 import snd.komelia.ui.collection.SeriesCollectionsContent
 import snd.komelia.ui.collection.SeriesCollectionsState
 import snd.komelia.ui.common.components.AppFilterChipDefaults
+import snd.komelia.ui.common.images.ThumbnailImage
 import snd.komelia.ui.common.immersive.ImmersiveDetailFab
 import snd.komelia.ui.common.immersive.ImmersiveDetailScaffold
 import snd.komelia.ui.common.menus.SeriesActionsMenu
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import snd.komelia.ui.common.menus.SeriesMenuActions
 import snd.komelia.ui.common.menus.bulk.BooksBulkActionsContent
 import snd.komelia.ui.common.menus.bulk.BottomPopupBulkActionsPanel
@@ -88,6 +93,8 @@ fun ImmersiveSeriesContent(
     onSeriesClick: (KomgaSeries) -> Unit,
     onBackClick: () -> Unit,
     onDownload: () -> Unit,
+    initiallyExpanded: Boolean,
+    onExpandChange: (Boolean) -> Unit,
 ) {
     val booksLoadState = booksState.state.collectAsState().value
     val booksData = remember(booksLoadState) {
@@ -143,6 +150,8 @@ fun ImmersiveSeriesContent(
         coverKey = series.id.value,
         cardColor = accentColor,
         immersive = true,
+        initiallyExpanded = initiallyExpanded,
+        onExpandChange = onExpandChange,
         topBarContent = {
             if (selectionMode) {
                 BulkActionsContainer(
@@ -237,12 +246,30 @@ fun ImmersiveSeriesContent(
                             .fillMaxWidth()
                             .heightIn(min = (thumbnailTopGap + thumbnailHeight) * expandFraction)
                             .padding(
-                                start = thumbnailOffset + 16.dp,
+                                start = 16.dp,
                                 end = 16.dp,
                                 top = lerp(8f, thumbnailTopGap.value, expandFraction).dp,
                             )
                     ) {
-                        Column {
+                        if (expandFraction > 0.01f) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(top = (thumbnailTopGap - 8.dp) * expandFraction)
+                                    .graphicsLayer { alpha = (expandFraction * 2f - 1f).coerceIn(0f, 1f) }
+                            ) {
+                                ThumbnailImage(
+                                    data = SeriesDefaultThumbnailRequest(series.id),
+                                    cacheKey = series.id.value,
+                                    crossfade = false,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(width = 110.dp, height = thumbnailHeight)
+                                        .clip(RoundedCornerShape(8.dp))
+                                )
+                            }
+                        }
+
+                        Column(modifier = Modifier.padding(start = thumbnailOffset)) {
                             Text(
                                 text = series.metadata.title,
                                 style = MaterialTheme.typography.headlineMedium.copy(
