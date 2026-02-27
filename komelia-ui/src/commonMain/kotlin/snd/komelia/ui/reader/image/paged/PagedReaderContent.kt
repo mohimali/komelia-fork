@@ -1,5 +1,6 @@
 package snd.komelia.ui.reader.image.paged
 
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -88,9 +89,23 @@ fun BoxScope.PagedReaderContent(
         screenScaleState.setScrollOrientation(Orientation.Horizontal, readingDirection == RIGHT_TO_LEFT)
     }
 
-    LaunchedEffect(currentSpreadIndex) {
-        if (pagerState.currentPage != currentSpreadIndex) {
-            pagerState.scrollToPage(currentSpreadIndex)
+    val coroutineScope = rememberCoroutineScope()
+    LaunchedEffect(Unit) {
+        pagedReaderState.pageNavigationEvents.collect { event ->
+            if (pagerState.currentPage != event.pageIndex) {
+                when (event) {
+                    is PagedReaderState.PageNavigationEvent.Animated -> {
+                        pagerState.animateScrollToPage(
+                            page = event.pageIndex,
+                            animationSpec = tween(durationMillis = 1000)
+                        )
+                    }
+
+                    is PagedReaderState.PageNavigationEvent.Immediate -> {
+                        pagerState.scrollToPage(event.pageIndex)
+                    }
+                }
+            }
         }
     }
 
@@ -112,7 +127,6 @@ fun BoxScope.PagedReaderContent(
         }
     }
 
-    val coroutineScope = rememberCoroutineScope()
     ReaderControlsOverlay(
         readingDirection = layoutDirection,
         onNexPageClick = { coroutineScope.launch { pagedReaderState.nextPage() } },

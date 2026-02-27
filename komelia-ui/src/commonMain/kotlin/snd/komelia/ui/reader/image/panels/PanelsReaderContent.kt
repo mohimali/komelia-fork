@@ -1,5 +1,6 @@
 package snd.komelia.ui.reader.image.panels
 
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -7,10 +8,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,6 +31,7 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import snd.komelia.image.ReaderImageResult
 import snd.komelia.settings.model.PagedReadingDirection
 import snd.komelia.settings.model.PagedReadingDirection.LEFT_TO_RIGHT
 import snd.komelia.settings.model.PagedReadingDirection.RIGHT_TO_LEFT
@@ -33,6 +40,7 @@ import snd.komelia.ui.reader.image.common.PagedReaderHelpDialog
 import snd.komelia.ui.reader.image.common.ReaderControlsOverlay
 import snd.komelia.ui.reader.image.common.ReaderImageContent
 import snd.komelia.ui.reader.image.common.ScalableContainer
+import snd.komelia.ui.reader.image.paged.PagedReaderState.PageNavigationEvent
 import snd.komelia.ui.reader.image.paged.PagedReaderState.TransitionPage
 import snd.komelia.ui.reader.image.paged.PagedReaderState.TransitionPage.BookEnd
 import snd.komelia.ui.reader.image.paged.PagedReaderState.TransitionPage.BookStart
@@ -56,9 +64,40 @@ fun BoxScope.PanelsReaderContent(
         LEFT_TO_RIGHT -> LayoutDirection.Ltr
         RIGHT_TO_LEFT -> LayoutDirection.Rtl
     }
-    val page = panelsReaderState.currentPage.collectAsState().value
+    val metadata = panelsReaderState.pageMetadata.collectAsState().value
+    val currentPageIndex = panelsReaderState.currentPageIndex.collectAsState().value
     val currentContainerSize = screenScaleState.areaSize.collectAsState().value
     val tapToZoom = panelsReaderState.tapToZoom.collectAsState().value
+
+    val pagerState = rememberPagerState(
+        initialPage = currentPageIndex.page,
+        pageCount = { metadata.size }
+    )
+
+    LaunchedEffect(Unit) {
+        panelsReaderState.pageNavigationEvents.collect { event ->
+            if (pagerState.currentPage != event.pageIndex) {
+                when (event) {
+                    is PageNavigationEvent.Animated -> {
+                        pagerState.animateScrollToPage(
+                            page = event.pageIndex,
+                            animationSpec = tween(durationMillis = 1000)
+                        )
+                    }
+
+                    is PageNavigationEvent.Immediate -> {
+                        pagerState.scrollToPage(event.pageIndex)
+                    }
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(pagerState.currentPage) {
+        if (pagerState.currentPage < metadata.size) {
+            panelsReaderState.onPageChange(pagerState.currentPage)
+        }
+    }
 
     val coroutineScope = rememberCoroutineScope()
     ReaderControlsOverlay(
@@ -86,11 +125,26 @@ fun BoxScope.PanelsReaderContent(
             if (transitionPage != null) {
                 TransitionPage(transitionPage)
             } else {
-                page?.let {
-                    Box(contentAlignment = Alignment.Center) {
-                        ReaderImageContent(page.imageResult)
+                if (metadata.isNotEmpty()) {
+                    HorizontalPager(
+                        state = pagerState,
+                        userScrollEnabled = false,
+                        reverseLayout = readingDirection == RIGHT_TO_LEFT,
+                        modifier = Modifier.fillMaxSize(),
+                        key = { if (it < metadata.size) metadata[it].pageNumber else it }
+                    ) { pageIdx ->
+                        if (pageIdx >= metadata.size) return@HorizontalPager
+                        val pageMeta = metadata[pageIdx]
+                        
+                        val imageResultState = remember(pageMeta) { mutableStateOf<ReaderImageResult?>(null) }
+                        LaunchedEffect(pageMeta) {
+                            imageResultState.value = panelsReaderState.getImage(pageMeta)
+                        }
+
+                        Box(contentAlignment = Alignment.Center) {
+                            ReaderImageContent(imageResultState.value)
+                        }
                     }
-//                    SinglePageLayout(page)
                 }
             }
         }

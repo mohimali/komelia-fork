@@ -93,6 +93,8 @@ class PagedReaderState(
     val readingDirection = MutableStateFlow(LEFT_TO_RIGHT)
     val tapToZoom = MutableStateFlow(true)
 
+    val pageNavigationEvents = MutableSharedFlow<PageNavigationEvent>(extraBufferCapacity = 1)
+
     suspend fun initialize() {
         layout.value = settingsRepository.getPagedReaderDisplayLayout().first()
         scaleType.value = settingsRepository.getPagedReaderScaleType().first()
@@ -232,7 +234,7 @@ class PagedReaderState(
         )
         currentSpreadIndex.value = newSpreadIndex
 
-        loadPage(newSpreadIndex)
+        jumpToPage(newSpreadIndex)
     }
 
     fun nextPage() {
@@ -303,15 +305,34 @@ class PagedReaderState(
         loadPage(lastPageIndex)
     }
 
+    fun jumpToPage(page: Int) {
+        if (currentSpreadIndex.value == page) return
+        pageChangeFlow.tryEmit(Unit)
+        val pageNumber = pageSpreads.value[page].last().pageNumber
+        stateScope.launch { readerState.onProgressChange(pageNumber) }
+        currentSpreadIndex.value = page
+        pageNavigationEvents.tryEmit(PageNavigationEvent.Immediate(page))
+
+        pageLoadScope.coroutineContext.cancelChildren()
+        pageLoadScope.launch { loadSpread(page) }
+    }
+
     private fun loadPage(spreadIndex: Int) {
         if (spreadIndex != currentSpreadIndex.value) {
             val pageNumber = pageSpreads.value[spreadIndex].last().pageNumber
             stateScope.launch { readerState.onProgressChange(pageNumber) }
             currentSpreadIndex.value = spreadIndex
+            pageNavigationEvents.tryEmit(PageNavigationEvent.Animated(spreadIndex))
         }
 
         pageLoadScope.coroutineContext.cancelChildren()
         pageLoadScope.launch { loadSpread(spreadIndex) }
+    }
+
+    sealed interface PageNavigationEvent {
+        val pageIndex: Int
+        data class Animated(override val pageIndex: Int) : PageNavigationEvent
+        data class Immediate(override val pageIndex: Int) : PageNavigationEvent
     }
 
     private suspend fun loadSpread(loadSpreadIndex: Int) {

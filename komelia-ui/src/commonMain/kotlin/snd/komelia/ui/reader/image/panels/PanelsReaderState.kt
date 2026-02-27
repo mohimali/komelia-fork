@@ -47,6 +47,7 @@ import snd.komelia.ui.reader.image.BookState
 import snd.komelia.ui.reader.image.PageMetadata
 import snd.komelia.ui.reader.image.ReaderState
 import snd.komelia.ui.reader.image.ScreenScaleState
+import snd.komelia.ui.reader.image.paged.PagedReaderState.PageNavigationEvent
 import snd.komelia.ui.reader.image.paged.PagedReaderState.TransitionPage
 import snd.komelia.ui.reader.image.paged.PagedReaderState.TransitionPage.BookEnd
 import snd.komelia.ui.reader.image.paged.PagedReaderState.TransitionPage.BookStart
@@ -99,6 +100,8 @@ class PanelsReaderState(
     val fullPageDisplayMode = MutableStateFlow(PanelsFullPageDisplayMode.NONE)
     val tapToZoom = MutableStateFlow(true)
 
+    val pageNavigationEvents = MutableSharedFlow<PageNavigationEvent>(extraBufferCapacity = 1)
+
     suspend fun initialize() {
         readingDirection.value = when (readerState.series.value?.metadata?.readingDirection) {
             KomgaReadingDirection.LEFT_TO_RIGHT -> LEFT_TO_RIGHT
@@ -142,6 +145,17 @@ class PanelsReaderState(
         stateScope.coroutineContext.cancelChildren()
         screenScaleState.enableOverscrollArea(false)
         imageCache.invalidateAll()
+    }
+
+    suspend fun getImage(page: PageMetadata): ReaderImageResult {
+        val pageId = page.toPageId()
+        val cached = imageCache.get(pageId)
+        return if (cached != null && !cached.isCancelled) {
+            cached.await().imageResult ?: ReaderImageResult.Error(Exception("Image result is null"))
+        } else {
+            val job = launchDownload(page)
+            job.await().imageResult ?: ReaderImageResult.Error(Exception("Image result is null"))
+        }
     }
 
     private suspend fun updateImageState(
@@ -200,7 +214,7 @@ class PanelsReaderState(
         )
         currentPageIndex.value = PageIndex(newPageIndex, 0)
 
-        launchPageLoad(newPageIndex)
+        jumpToPage(newPageIndex)
     }
 
     fun onReadingDirectionChange(readingDirection: PagedReadingDirection) {
@@ -327,33 +341,49 @@ class PanelsReaderState(
         }
     }
 
+    fun jumpToPage(page: Int) {
+        if (currentPageIndex.value.page == page) return
+        pageChangeFlow.tryEmit(Unit)
+        val pageNumber = page + 1
+        stateScope.launch { readerState.onProgressChange(pageNumber) }
+        pageNavigationEvents.tryEmit(PageNavigationEvent.Immediate(page))
+        launchPageLoad(page)
+    }
+
     fun onPageChange(page: Int, startAtLast: Boolean = false) {
         if (currentPageIndex.value.page == page) return
         pageChangeFlow.tryEmit(Unit)
-        launchPageLoad(page, startAtLast)
+        pageNavigationEvents.tryEmit(PageNavigationEvent.Animated(page))
+        launchPageLoad(page, startAtLast, isAnimated = true)
     }
 
-    private fun launchPageLoad(pageIndex: Int, startAtLast: Boolean = false) {
+    private fun launchPageLoad(pageIndex: Int, startAtLast: Boolean = false, isAnimated: Boolean = false) {
         if (pageIndex != currentPageIndex.value.page) {
             val pageNumber = pageIndex + 1
             stateScope.launch { readerState.onProgressChange(pageNumber) }
         }
 
         pageLoadScope.coroutineContext.cancelChildren()
-        pageLoadScope.launch { doPageLoad(pageIndex, startAtLast) }
+        pageLoadScope.launch { doPageLoad(pageIndex, startAtLast, isAnimated) }
     }
 
-    private suspend fun doPageLoad(pageIndex: Int, startAtLast: Boolean = false) {
+    private suspend fun doPageLoad(pageIndex: Int, startAtLast: Boolean = false, isAnimated: Boolean = false) {
         val pageMeta = pageMetadata.value[pageIndex]
         val downloadJob = launchDownload(pageMeta)
         preloadImagesBetween(pageIndex)
 
         if (downloadJob.isActive) {
-            currentPage.value = PanelsPage(
-                metadata = pageMeta,
-                imageResult = null,
-                panelData = null
-            )
+            currentPage.update {
+                it?.copy(
+                    metadata = pageMeta,
+                    imageResult = null,
+                    panelData = null
+                ) ?: PanelsPage(
+                    metadata = pageMeta,
+                    imageResult = null,
+                    panelData = null
+                )
+            }
             currentPageIndex.update { PageIndex(pageIndex, 0) }
             transitionPage.value = null
             screenScaleState.enableOverscrollArea(false)
@@ -406,7 +436,11 @@ class PanelsReaderState(
         transitionPage.value = null
         currentPage.value = pageWithInjectedPanels
         screenScaleState.enableOverscrollArea(true)
-        screenScaleState.apply(scale)
+        if (isAnimated) {
+            screenScaleState.animateTo(scale.transformation.value.offset, scale.zoom.value)
+        } else {
+            screenScaleState.apply(scale)
+        }
     }
 
     private fun preloadImagesBetween(pageIndex: Int) {
