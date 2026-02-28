@@ -265,25 +265,23 @@ fun LibraryToolBar(
     val mainScreenVm = LocalMainScreenViewModel.current
     val coroutineScope = rememberCoroutineScope()
 
-    Box(modifier = Modifier.fillMaxWidth()) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Spacer(Modifier.width(15.dp))
+        Text(
+            library?.let { library.name } ?: "All Libraries",
+            modifier = Modifier.width(68.dp).clickable { coroutineScope.launch { mainScreenVm.toggleNavBar() } },
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
         LazyRow(
-            modifier = Modifier.align(Alignment.CenterStart).padding(end = 48.dp),
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            item {
-                Spacer(Modifier.width(15.dp))
-            }
-            item {
-                Text(
-                    library?.let { library.name } ?: "All Libraries",
-                    modifier = Modifier.widthIn(max = 150.dp).clickable { coroutineScope.launch { mainScreenVm.toggleNavBar() } },
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-
             if (collectionsCount > 0 || readListsCount > 0)
                 item {
                     FilterChip(
@@ -322,7 +320,7 @@ fun LibraryToolBar(
         }
 
         if (library != null && (isAdmin || isOffline)) {
-            Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+            Box {
                 IconButton(
                     onClick = { showOptionsMenu = true }
                 ) {

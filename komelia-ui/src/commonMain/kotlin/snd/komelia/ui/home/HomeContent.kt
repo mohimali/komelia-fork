@@ -26,7 +26,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -123,24 +123,12 @@ private fun Toolbar(
 
         LazyRow(
             state = lazyRowState,
-            modifier = Modifier.animateContentSize(),
+            modifier = Modifier.animateContentSize().padding(end = 48.dp),
             horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             item {
-                Spacer(Modifier.width(20.dp))
-            }
-
-            item {
-                FilterChip(
-                    onClick = onEditStart,
-                    selected = false,
-                    label = {
-                        Icon(Icons.Default.Tune, null)
-                    },
-                    colors = chipColors,
-                    border = null,
-                )
+                Spacer(Modifier.width(5.dp))
             }
 
             if (filters.size > 1) {
@@ -178,6 +166,13 @@ private fun Toolbar(
             item {
                 Spacer(Modifier.width(40.dp))
             }
+        }
+
+        IconButton(
+            onClick = onEditStart,
+            modifier = Modifier.align(Alignment.CenterEnd)
+        ) {
+            Icon(Icons.Rounded.MoreVert, null)
         }
 
         if (LocalPlatform.current != PlatformType.MOBILE) {
