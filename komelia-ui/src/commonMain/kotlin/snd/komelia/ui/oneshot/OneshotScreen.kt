@@ -82,7 +82,7 @@ class OneshotScreen(
         val vmBook = vm.book.collectAsState().value
         val vmSeries = vm.series.collectAsState().value
         val vmLibrary = vm.library.collectAsState().value
-        if (platform == PlatformType.MOBILE && useNewUI && vmBook != null && vmSeries != null && vmLibrary != null) {
+        if (platform == PlatformType.MOBILE && useNewUI && vmSeries != null) {
             ImmersiveOneshotContent(
                 series = vmSeries,
                 book = vmBook,
@@ -90,9 +90,10 @@ class OneshotScreen(
                 accentColor = LocalAccentColor.current,
                 onLibraryClick = { navigator.push(LibraryScreen(it.id)) },
                 onBookReadClick = { markReadProgress ->
+                    val currentBook = vm.book.value ?: return@ImmersiveOneshotContent
                     navigator.parent?.push(
                         readerScreen(
-                            book = vmBook,
+                            book = currentBook,
                             markReadProgress = markReadProgress,
                             bookSiblingsContext = bookSiblingsContext,
                         )
@@ -111,9 +112,10 @@ class OneshotScreen(
                     )
                 },
                 onFilterClick = { filter ->
+                    val libraryId = vm.book.value?.libraryId ?: return@ImmersiveOneshotContent
                     navigator.popUntilRoot()
                     navigator.dispose(navigator.lastItem)
-                    navigator.replaceAll(LibraryScreen(vmBook.libraryId, filter))
+                    navigator.replaceAll(LibraryScreen(libraryId, filter))
                 },
                 onBookDownload = vm::onBookDownload,
                 cardWidth = vm.cardWidth.collectAsState().value,

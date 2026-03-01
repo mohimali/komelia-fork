@@ -1,5 +1,6 @@
 package snd.komelia.ui.book.immersive
 
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
@@ -41,8 +42,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.first
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -99,29 +103,48 @@ fun ImmersiveBookContent(
     initiallyExpanded: Boolean,
     onExpandChange: (Boolean) -> Unit,
 ) {
-    val initialPage = remember(siblingBooks, book) {
-        siblingBooks.indexOfFirst { it.id == book.id }.coerceAtLeast(0)
+    // Detect when the shared transition is no longer "entering".
+    // animatedVisibilityScope is null when there is no shared transition (fallback: treat as settled).
+    val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
+    val transitionIsSettled = remember(animatedVisibilityScope) {
+        derivedStateOf {
+            animatedVisibilityScope == null ||
+                animatedVisibilityScope.transition.currentState == EnterExitState.Visible
+        }
     }
-    val pagerState = rememberPagerState(
-        initialPage = initialPage,
-        pageCount = { maxOf(1, siblingBooks.size) }
-    )
 
-    // Once siblings load, jump to the correct page without animation.
-    // Guard with initialScrollDone so that subsequent siblingBooks emissions
-    // (e.g. from read-progress updates) don't yank the pager back.
+    // pagerExpanded: controls page count (1 → N). Flipped first so the pager can be scrolled.
+    // initialScrollDone: controls the pageBook guard. Flipped AFTER scrollToPage so that no
+    // page shows the wrong cover during the brief window between expansion and scroll.
+    var pagerExpanded by remember { mutableStateOf(false) }
     var initialScrollDone by remember { mutableStateOf(false) }
+    val pagerPageCount = if (pagerExpanded) maxOf(1, siblingBooks.size) else 1
+    val pagerState = rememberPagerState(pageCount = { pagerPageCount })
+
     LaunchedEffect(siblingBooks) {
         if (!initialScrollDone && siblingBooks.isNotEmpty()) {
+            // Wait for the transition to settle so new pages don't fire animateEnterExit.
+            snapshotFlow { transitionIsSettled.value }.first { it }
             val idx = siblingBooks.indexOfFirst { it.id == book.id }.coerceAtLeast(0)
+            // Expand pager (pageBook guard still holds — all pages show book's cover).
+            pagerExpanded = true
+            // Wait for the pager to recognise the expanded page count, then snap to correct page.
+            snapshotFlow { pagerState.pageCount }.first { it > idx }
             pagerState.scrollToPage(idx)
+            // Only now unlock pageBook — pager is already on the right page, so siblingBooks[idx]
+            // is the same book and coverData key is unchanged → no flash.
             initialScrollDone = true
         }
     }
 
-    // selectedBook drives the FAB and 3-dot menu after each swipe settles
-    val selectedBook = remember(pagerState.settledPage, siblingBooks) {
-        siblingBooks.getOrNull(pagerState.settledPage) ?: book
+    // selectedBook drives the FAB and 3-dot menu after each swipe settles.
+    // Guard by initialScrollDone: before the pager has landed on the right page, always return
+    // the originally-tapped book. Without this guard, settledPage=0 when siblings first load
+    // would produce selectedBook=siblingBooks[0], triggering onBookChange with the wrong book —
+    // which propagates back as the `book` prop and corrupts the pageBook guard above.
+    val selectedBook = remember(pagerState.settledPage, siblingBooks, initialScrollDone) {
+        if (initialScrollDone) siblingBooks.getOrNull(pagerState.settledPage) ?: book
+        else book
     }
 
     LaunchedEffect(selectedBook) {
@@ -131,7 +154,6 @@ fun ImmersiveBookContent(
     var showDownloadConfirmationDialog by remember { mutableStateOf(false) }
 
     val sharedTransitionScope = LocalSharedTransitionScope.current
-    val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
 
     val fabOverlayModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
         with(sharedTransitionScope) {
@@ -164,7 +186,9 @@ fun ImmersiveBookContent(
             modifier = Modifier.fillMaxSize(),
             pageSpacing = 8.dp,
         ) { pageIndex ->
-            val pageBook = siblingBooks.getOrNull(pageIndex) ?: book
+            // During the transition (initialScrollDone = false, pager has 1 page) always show the
+            // tapped book so the shared-element cover key stays stable throughout the animation.
+            val pageBook = if (!initialScrollDone) book else (siblingBooks.getOrNull(pageIndex) ?: book)
             // Memoize to avoid a new Random requestCache on every recomposition, which would
             // cause ThumbnailImage's remember(data,cacheKey) to rebuild the ImageRequest and flash.
             val coverData = remember(pageBook.id) { BookDefaultThumbnailRequest(pageBook.id) }

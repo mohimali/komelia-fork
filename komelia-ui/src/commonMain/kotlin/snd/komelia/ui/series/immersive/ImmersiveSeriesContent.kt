@@ -46,6 +46,9 @@ import androidx.compose.ui.util.lerp
 import snd.komelia.image.coil.SeriesDefaultThumbnailRequest
 import snd.komelia.komga.api.model.KomeliaBook
 import snd.komelia.ui.LoadState
+import snd.komelia.ui.LocalKomgaEvents
+import snd.komga.client.sse.KomgaEvent.ThumbnailBookEvent
+import snd.komga.client.sse.KomgaEvent.ThumbnailSeriesEvent
 import snd.komelia.ui.collection.SeriesCollectionsContent
 import snd.komelia.ui.collection.SeriesCollectionsState
 import snd.komelia.ui.common.components.AppFilterChipDefaults
@@ -145,8 +148,21 @@ fun ImmersiveSeriesContent(
         }
     }
 
+    val komgaEvents = LocalKomgaEvents.current
+    var coverData by remember(series.id) { mutableStateOf(SeriesDefaultThumbnailRequest(series.id)) }
+    LaunchedEffect(series.id) {
+        komgaEvents.collect { event ->
+            val eventSeriesId = when (event) {
+                is ThumbnailSeriesEvent -> event.seriesId
+                is ThumbnailBookEvent -> event.seriesId
+                else -> null
+            }
+            if (eventSeriesId == series.id) coverData = SeriesDefaultThumbnailRequest(series.id)
+        }
+    }
+
     ImmersiveDetailScaffold(
-        coverData = SeriesDefaultThumbnailRequest(series.id),
+        coverData = coverData,
         coverKey = series.id.value,
         cardColor = accentColor,
         immersive = true,
@@ -258,7 +274,7 @@ fun ImmersiveSeriesContent(
                                     .graphicsLayer { alpha = (expandFraction * 2f - 1f).coerceIn(0f, 1f) }
                             ) {
                                 ThumbnailImage(
-                                    data = SeriesDefaultThumbnailRequest(series.id),
+                                    data = coverData,
                                     cacheKey = series.id.value,
                                     crossfade = false,
                                     contentScale = ContentScale.Crop,

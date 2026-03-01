@@ -20,15 +20,16 @@ fun ThumbnailImage(
     cacheKey: String,
     contentScale: ContentScale = ContentScale.Fit,
     crossfade: Boolean = true,
+    usePlaceholderKey: Boolean = true,
     placeholder: Painter? = NoopPainter,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalPlatformContext.current
-    val request = remember(data, cacheKey) {
+    val request = remember(data, cacheKey, crossfade, usePlaceholderKey) {
         ImageRequest.Builder(context)
             .data(data)
             .memoryCacheKey(cacheKey)
-            .placeholderMemoryCacheKey(cacheKey)
+            .apply { if (usePlaceholderKey) placeholderMemoryCacheKey(cacheKey) }
             .diskCacheKey(cacheKey)
             .precision(Precision.INEXACT)
             .crossfade(crossfade)

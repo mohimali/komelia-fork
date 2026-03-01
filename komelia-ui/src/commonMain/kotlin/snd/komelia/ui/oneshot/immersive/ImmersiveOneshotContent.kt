@@ -30,11 +30,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,6 +60,9 @@ import kotlinx.datetime.format
 import kotlinx.datetime.toLocalDateTime
 import snd.komelia.DefaultDateTimeFormats.localDateTimeFormat
 import snd.komelia.image.coil.SeriesDefaultThumbnailRequest
+import snd.komelia.ui.LocalKomgaEvents
+import snd.komga.client.sse.KomgaEvent.ThumbnailBookEvent
+import snd.komga.client.sse.KomgaEvent.ThumbnailSeriesEvent
 import kotlin.math.roundToInt
 import snd.komelia.komga.api.model.KomeliaBook
 import snd.komelia.ui.book.BookInfoColumn
@@ -83,8 +88,8 @@ private val emphasizedAccelerateEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.1
 @Composable
 fun ImmersiveOneshotContent(
     series: KomgaSeries,
-    book: KomeliaBook,
-    library: KomgaLibrary,
+    book: KomeliaBook?,
+    library: KomgaLibrary?,
     accentColor: Color?,
     onLibraryClick: (KomgaLibrary) -> Unit,
     onBookReadClick: (markReadProgress: Boolean) -> Unit,
@@ -103,6 +108,18 @@ fun ImmersiveOneshotContent(
     onExpandChange: (Boolean) -> Unit,
 ) {
     var showDownloadConfirmationDialog by remember { mutableStateOf(false) }
+    val komgaEvents = LocalKomgaEvents.current
+    var coverData by remember(series.id) { mutableStateOf(SeriesDefaultThumbnailRequest(series.id)) }
+    LaunchedEffect(series.id) {
+        komgaEvents.collect { event ->
+            val eventSeriesId = when (event) {
+                is ThumbnailSeriesEvent -> event.seriesId
+                is ThumbnailBookEvent -> event.seriesId
+                else -> null
+            }
+            if (eventSeriesId == series.id) coverData = SeriesDefaultThumbnailRequest(series.id)
+        }
+    }
 
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
@@ -133,7 +150,7 @@ fun ImmersiveOneshotContent(
     Box(modifier = Modifier.fillMaxSize()) {
 
         ImmersiveDetailScaffold(
-            coverData = SeriesDefaultThumbnailRequest(series.id),
+            coverData = coverData,
             coverKey = series.id.value,
             cardColor = accentColor,
             immersive = true,
@@ -142,170 +159,30 @@ fun ImmersiveOneshotContent(
             topBarContent = {},   // Fixed overlay handles this
             fabContent = {},      // Fixed overlay handles this
             cardContent = { expandFraction ->
-                val thumbnailOffset = (126.dp * expandFraction).coerceAtLeast(0.dp)
-                val thumbnailTopGap = 20.dp
-                val thumbnailHeight = 110.dp / 0.703f // ≈ 156.5 dp
-
-                val navBarBottom = with(LocalDensity.current) {
-                    WindowInsets.navigationBars.getBottom(this).toDp()
-                }
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(1),
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.spacedBy(0.dp),
-                    contentPadding = PaddingValues(bottom = navBarBottom + 80.dp),
-                ) {
-                    // Collapsed stats line (fades out as card expands)
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        val alpha = (1f - expandFraction * 2f).coerceIn(0f, 1f)
-                        if (alpha > 0.01f)
-                            BookStatsLine(book, Modifier
-                                .padding(start = 16.dp, end = 16.dp, top = 4.dp)
-                                .graphicsLayer { this.alpha = alpha })
+                if (book == null || library == null) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
                     }
-
-                    // Header: book title + writers (year)
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = (thumbnailTopGap + thumbnailHeight) * expandFraction)
-                                .padding(
-                                    start = 16.dp,
-                                    end = 16.dp,
-                                    top = lerp(8f, thumbnailTopGap.value, expandFraction).dp,
-                                )
-                        ) {
-                            if (expandFraction > 0.01f) {
-                                Box(
-                                    modifier = Modifier
-                                        .padding(top = (thumbnailTopGap - 8.dp) * expandFraction)
-                                        .graphicsLayer { alpha = (expandFraction * 2f - 1f).coerceIn(0f, 1f) }
-                                ) {
-                                    ThumbnailImage(
-                                        data = SeriesDefaultThumbnailRequest(series.id),
-                                        cacheKey = series.id.value,
-                                        crossfade = false,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .size(width = 110.dp, height = thumbnailHeight)
-                                            .clip(RoundedCornerShape(8.dp))
-                                    )
-                                }
-                            }
-
-                            Column(modifier = Modifier.padding(start = thumbnailOffset)) {
-                                // Book title (headlineSmall, bold)
-                                Text(
-                                    text = book.metadata.title,
-                                    style = MaterialTheme.typography.headlineSmall.copy(
-                                        fontWeight = FontWeight.Bold,
-                                    ),
-                                )
-                                // Writers (year) — labelSmall
-                                val writers = remember(book.metadata.authors) {
-                                    book.metadata.authors
-                                        .filter { it.role.lowercase() == "writer" }
-                                        .joinToString(", ") { it.name }
-                                }
-                                val year = book.metadata.releaseDate?.year
-                                val writersYearText = buildString {
-                                    if (writers.isNotEmpty()) append(writers)
-                                    if (year != null) {
-                                        if (writers.isNotEmpty()) append(" ")
-                                        append("($year)")
-                                    }
-                                }
-                                if (writersYearText.isNotEmpty()) {
-                                    Text(
-                                        text = writersYearText,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        modifier = Modifier.padding(top = 2.dp),
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Expanded stats line (fades in as card expands)
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        val alpha = (expandFraction * 2f - 1f).coerceIn(0f, 1f)
-                        if (alpha > 0.01f)
-                            BookStatsLine(book, Modifier
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                                .graphicsLayer { this.alpha = alpha })
-                    }
-
-                    // SeriesDescriptionRow (library, status, age rating, etc.)
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        SeriesDescriptionRow(
-                            library = library,
-                            onLibraryClick = onLibraryClick,
-                            releaseDate = null,
-                            status = null,
-                            ageRating = series.metadata.ageRating,
-                            language = series.metadata.language,
-                            readingDirection = series.metadata.readingDirection,
-                            deleted = series.deleted || library.unavailable,
-                            alternateTitles = series.metadata.alternateTitles,
-                            onFilterClick = onFilterClick,
-                            showReleaseYear = false,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                        )
-                    }
-
-                    // Summary
-                    if (book.metadata.summary.isNotBlank()) {
-                        item {
-                            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                                Text(
-                                    text = book.metadata.summary,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
-                            }
-                        }
-                    }
-
-                    // Divider
-                    item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
-
-                    // Book metadata (authors, tags, links, file info, ISBN)
-                    item {
-                        Box(Modifier.padding(horizontal = 16.dp)) {
-                            BookInfoColumn(
-                                publisher = series.metadata.publisher,
-                                genres = series.metadata.genres,
-                                authors = book.metadata.authors,
-                                tags = book.metadata.tags,
-                                links = book.metadata.links,
-                                sizeInMiB = book.size,
-                                mediaType = book.media.mediaType,
-                                isbn = book.metadata.isbn,
-                                fileUrl = book.url,
-                                onFilterClick = onFilterClick,
-                            )
-                        }
-                    }
-
-                    // Reading lists
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        BookReadListsContent(
-                            readLists = readLists,
-                            onReadListClick = onReadListClick,
-                            onBookClick = onReadlistBookClick,
-                            cardWidth = cardWidth,
-                        )
-                    }
-
-                    // Collections
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        SeriesCollectionsContent(
-                            collections = collections,
-                            onCollectionClick = onCollectionClick,
-                            onSeriesClick = onSeriesClick,
-                            cardWidth = cardWidth,
-                        )
-                    }
+                } else {
+                    OneshotCardContent(
+                        series = series,
+                        book = book,
+                        library = library,
+                        coverData = coverData,
+                        expandFraction = expandFraction,
+                        onLibraryClick = onLibraryClick,
+                        onFilterClick = onFilterClick,
+                        readLists = readLists,
+                        onReadListClick = onReadListClick,
+                        onReadlistBookClick = onReadlistBookClick,
+                        collections = collections,
+                        onCollectionClick = onCollectionClick,
+                        onSeriesClick = onSeriesClick,
+                        cardWidth = cardWidth,
+                    )
                 }
             }
         )
@@ -330,24 +207,26 @@ fun ImmersiveOneshotContent(
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = Color.White)
             }
 
-            var expandActions by remember { mutableStateOf(false) }
-            Box {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(Color.Black.copy(alpha = 0.55f), CircleShape)
-                        .clickable { expandActions = true },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Rounded.MoreVert, contentDescription = null, tint = Color.White)
+            if (book != null) {
+                var expandActions by remember { mutableStateOf(false) }
+                Box {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(Color.Black.copy(alpha = 0.55f), CircleShape)
+                            .clickable { expandActions = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Rounded.MoreVert, contentDescription = null, tint = Color.White)
+                    }
+                    OneshotActionsMenu(
+                        series = series,
+                        book = book,
+                        actions = oneshotMenuActions,
+                        expanded = expandActions,
+                        onDismissRequest = { expandActions = false },
+                    )
                 }
-                OneshotActionsMenu(
-                    series = series,
-                    book = book,
-                    actions = oneshotMenuActions,
-                    expanded = expandActions,
-                    onDismissRequest = { expandActions = false },
-                )
             }
         }
 
@@ -361,16 +240,16 @@ fun ImmersiveOneshotContent(
                 .padding(bottom = 16.dp)
         ) {
             ImmersiveDetailFab(
-                onReadClick = { onBookReadClick(true) },
-                onReadIncognitoClick = { onBookReadClick(false) },
-                onDownloadClick = { showDownloadConfirmationDialog = true },
+                onReadClick = { if (book != null) onBookReadClick(true) },
+                onReadIncognitoClick = { if (book != null) onBookReadClick(false) },
+                onDownloadClick = { if (book != null) showDownloadConfirmationDialog = true },
                 accentColor = accentColor,
-                showReadActions = true,
+                showReadActions = book != null,
             )
         }
     }
 
-    if (showDownloadConfirmationDialog) {
+    if (showDownloadConfirmationDialog && book != null) {
         var permissionRequested by remember { mutableStateOf(false) }
         DownloadNotificationRequestDialog { permissionRequested = true }
         if (permissionRequested) {
@@ -381,6 +260,190 @@ fun ImmersiveOneshotContent(
                     showDownloadConfirmationDialog = false
                 },
                 onDialogDismiss = { showDownloadConfirmationDialog = false },
+            )
+        }
+    }
+}
+
+@Composable
+private fun OneshotCardContent(
+    series: KomgaSeries,
+    book: KomeliaBook,
+    library: KomgaLibrary,
+    coverData: Any,
+    expandFraction: Float,
+    onLibraryClick: (KomgaLibrary) -> Unit,
+    onFilterClick: (SeriesScreenFilter) -> Unit,
+    readLists: Map<KomgaReadList, List<KomeliaBook>>,
+    onReadListClick: (KomgaReadList) -> Unit,
+    onReadlistBookClick: (KomeliaBook, KomgaReadList) -> Unit,
+    collections: Map<KomgaCollection, List<KomgaSeries>>,
+    onCollectionClick: (KomgaCollection) -> Unit,
+    onSeriesClick: (KomgaSeries) -> Unit,
+    cardWidth: Dp,
+) {
+    val thumbnailOffset = (126.dp * expandFraction).coerceAtLeast(0.dp)
+    val thumbnailTopGap = 20.dp
+    val thumbnailHeight = 110.dp / 0.703f // ≈ 156.5 dp
+
+    val navBarBottom = with(LocalDensity.current) {
+        WindowInsets.navigationBars.getBottom(this).toDp()
+    }
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(1),
+        modifier = Modifier.fillMaxSize(),
+        horizontalArrangement = Arrangement.spacedBy(0.dp),
+        contentPadding = PaddingValues(bottom = navBarBottom + 80.dp),
+    ) {
+        // Collapsed stats line (fades out as card expands)
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            val alpha = (1f - expandFraction * 2f).coerceIn(0f, 1f)
+            if (alpha > 0.01f)
+                BookStatsLine(book, Modifier
+                    .padding(start = 16.dp, end = 16.dp, top = 4.dp)
+                    .graphicsLayer { this.alpha = alpha })
+        }
+
+        // Header: book title + writers (year)
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = (thumbnailTopGap + thumbnailHeight) * expandFraction)
+                    .padding(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = lerp(8f, thumbnailTopGap.value, expandFraction).dp,
+                    )
+            ) {
+                if (expandFraction > 0.01f) {
+                    Box(
+                        modifier = Modifier
+                            .padding(top = (thumbnailTopGap - 8.dp) * expandFraction)
+                            .graphicsLayer { alpha = (expandFraction * 2f - 1f).coerceIn(0f, 1f) }
+                    ) {
+                        ThumbnailImage(
+                            data = coverData,
+                            cacheKey = series.id.value,
+                            crossfade = false,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(width = 110.dp, height = thumbnailHeight)
+                                .clip(RoundedCornerShape(8.dp))
+                        )
+                    }
+                }
+
+                Column(modifier = Modifier.padding(start = thumbnailOffset)) {
+                    // Book title (headlineSmall, bold)
+                    Text(
+                        text = book.metadata.title,
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                        ),
+                    )
+                    // Writers (year) — labelSmall
+                    val writers = remember(book.metadata.authors) {
+                        book.metadata.authors
+                            .filter { it.role.lowercase() == "writer" }
+                            .joinToString(", ") { it.name }
+                    }
+                    val year = book.metadata.releaseDate?.year
+                    val writersYearText = buildString {
+                        if (writers.isNotEmpty()) append(writers)
+                        if (year != null) {
+                            if (writers.isNotEmpty()) append(" ")
+                            append("($year)")
+                        }
+                    }
+                    if (writersYearText.isNotEmpty()) {
+                        Text(
+                            text = writersYearText,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
+                }
+            }
+        }
+
+        // Expanded stats line (fades in as card expands)
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            val alpha = (expandFraction * 2f - 1f).coerceIn(0f, 1f)
+            if (alpha > 0.01f)
+                BookStatsLine(book, Modifier
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .graphicsLayer { this.alpha = alpha })
+        }
+
+        // SeriesDescriptionRow (library, status, age rating, etc.)
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            SeriesDescriptionRow(
+                library = library,
+                onLibraryClick = onLibraryClick,
+                releaseDate = null,
+                status = null,
+                ageRating = series.metadata.ageRating,
+                language = series.metadata.language,
+                readingDirection = series.metadata.readingDirection,
+                deleted = series.deleted || library.unavailable,
+                alternateTitles = series.metadata.alternateTitles,
+                onFilterClick = onFilterClick,
+                showReleaseYear = false,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+        }
+
+        // Summary
+        if (book.metadata.summary.isNotBlank()) {
+            item {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Text(
+                        text = book.metadata.summary,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        }
+
+        // Divider
+        item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
+
+        // Book metadata (authors, tags, links, file info, ISBN)
+        item {
+            Box(Modifier.padding(horizontal = 16.dp)) {
+                BookInfoColumn(
+                    publisher = series.metadata.publisher,
+                    genres = series.metadata.genres,
+                    authors = book.metadata.authors,
+                    tags = book.metadata.tags,
+                    links = book.metadata.links,
+                    sizeInMiB = book.size,
+                    mediaType = book.media.mediaType,
+                    isbn = book.metadata.isbn,
+                    fileUrl = book.url,
+                    onFilterClick = onFilterClick,
+                )
+            }
+        }
+
+        // Reading lists
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            BookReadListsContent(
+                readLists = readLists,
+                onReadListClick = onReadListClick,
+                onBookClick = onReadlistBookClick,
+                cardWidth = cardWidth,
+            )
+        }
+
+        // Collections
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            SeriesCollectionsContent(
+                collections = collections,
+                onCollectionClick = onCollectionClick,
+                onSeriesClick = onSeriesClick,
+                cardWidth = cardWidth,
             )
         }
     }
