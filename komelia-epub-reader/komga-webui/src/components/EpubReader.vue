@@ -128,33 +128,20 @@
         <div id="reader-error"></div>
       </main>
       <a id="previous-chapter" rel="prev" role="button" aria-labelledby="previous-label"
-         style="left: 50%;position: fixed;color: #000;height: 24px;background: #d3d3d33b; width: 150px;transform: translate(-50%, 0); display: block"
-         :style="`top: ${showToolbars ? 48 : 0}px`"
-         :class="settings.navigationButtons ? '' : 'hidden'"
-      >
-        <v-icon :icon="mdiChevronUp" style="left: calc(50% - 12px); position: relative;"/>
-      </a>
+         style="display: none !important; pointer-events: none !important;"
+      ></a>
       <a id="next-chapter" rel="next" role="button" aria-labelledby="next-label"
-         :class="settings.navigationButtons ? '' : 'hidden'"
-         style="bottom: 0;left: 50%;position: fixed;color: #000;height: 24px;background: #d3d3d33b; width: 150px;transform: translate(-50%, 0); display: block">
-        <v-icon :icon="mdiChevronDown" style="left: calc(50% - 12px);position: relative;"/>
-      </a>
+         style="display: none !important; pointer-events: none !important;"
+      ></a>
     </div>
 
     <footer id="footerMenu">
       <a rel="prev" class="disabled" role="button" aria-labelledby="previous-label"
-         style="top: 50%;left:0;position: fixed;height: 100px;background: #d3d3d33b;"
-         :class="settings.navigationButtons ? '' : 'hidden'"
-      >
-        <v-icon :icon="mdiChevronLeft" style="top: calc(50% - 12px);
-                        position: relative;"/>
-      </a>
+         style="display: none !important; pointer-events: none !important;"
+      ></a>
       <a rel="next" class="disabled" role="button" aria-labelledby="next-label"
-         style="top: 50%;right:0;position: fixed;height: 100px;background: #d3d3d33b;"
-         :class="settings.navigationButtons ? '' : 'hidden'"
-      >
-        <v-icon :icon="mdiChevronRight" style="top: calc(50% - 12px);position: relative;"/>
-      </a>
+         style="display: none !important; pointer-events: none !important;"
+      ></a>
     </footer>
 
     <v-container fluid class="full-width" style="position: fixed; bottom: 0; font-size: .85rem"
@@ -341,10 +328,8 @@ import IconFormatLineSpacingDown from "@/components/IconFormatLineSpacingDown.vu
 import {
   mdiArrowLeft,
   mdiCheck,
-  mdiChevronDown,
   mdiChevronLeft,
   mdiChevronRight,
-  mdiChevronUp,
   mdiClose,
   mdiCog,
   mdiEiffelTower,
