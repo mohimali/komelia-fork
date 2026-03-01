@@ -69,6 +69,7 @@ class PagedReaderState(
 ) {
     private val stateScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val pageLoadScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var loadSpreadJob: kotlinx.coroutines.Job? = null
 
     private val imageCache = Cache.Builder<PageId, Deferred<Page>>()
         .maximumCacheSize(10)
@@ -146,6 +147,7 @@ class PagedReaderState(
 
     fun stop() {
         stateScope.coroutineContext.cancelChildren()
+        pageLoadScope.coroutineContext.cancelChildren()
         screenScaleState.enableOverscrollArea(false)
         screenScaleState.edgeHandoffEnabled = false
         imageCache.invalidateAll()
@@ -316,8 +318,8 @@ class PagedReaderState(
         currentSpreadIndex.value = page
         pageNavigationEvents.tryEmit(PageNavigationEvent.Immediate(page))
 
-        pageLoadScope.coroutineContext.cancelChildren()
-        pageLoadScope.launch { loadSpread(page) }
+        loadSpreadJob?.cancel()
+        loadSpreadJob = pageLoadScope.launch { loadSpread(page) }
     }
 
     private fun loadPage(spreadIndex: Int) {
@@ -328,8 +330,8 @@ class PagedReaderState(
             pageNavigationEvents.tryEmit(PageNavigationEvent.Animated(spreadIndex))
         }
 
-        pageLoadScope.coroutineContext.cancelChildren()
-        pageLoadScope.launch { loadSpread(spreadIndex) }
+        loadSpreadJob?.cancel()
+        loadSpreadJob = pageLoadScope.launch { loadSpread(spreadIndex) }
     }
 
     sealed interface PageNavigationEvent {

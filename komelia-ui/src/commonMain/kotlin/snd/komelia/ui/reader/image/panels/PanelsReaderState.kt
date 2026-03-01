@@ -75,6 +75,7 @@ class PanelsReaderState(
 ) {
     private val stateScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val pageLoadScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var pageLoadJob: kotlinx.coroutines.Job? = null
     private val imageCache = Cache.Builder<PageId, Deferred<PanelsPage>>()
         .maximumCacheSize(10)
         .eventListener {
@@ -178,6 +179,7 @@ class PanelsReaderState(
 
     fun stop() {
         stateScope.coroutineContext.cancelChildren()
+        pageLoadScope.coroutineContext.cancelChildren()
         screenScaleState.enableOverscrollArea(false)
         imageCache.invalidateAll()
     }
@@ -419,8 +421,8 @@ class PanelsReaderState(
             stateScope.launch { readerState.onProgressChange(pageNumber) }
         }
 
-        pageLoadScope.coroutineContext.cancelChildren()
-        pageLoadScope.launch { doPageLoad(pageIndex, startAtLast, isAnimated) }
+        pageLoadJob?.cancel()
+        pageLoadJob = pageLoadScope.launch { doPageLoad(pageIndex, startAtLast, isAnimated) }
     }
 
     private suspend fun doPageLoad(pageIndex: Int, startAtLast: Boolean = false, isAnimated: Boolean = false) {
