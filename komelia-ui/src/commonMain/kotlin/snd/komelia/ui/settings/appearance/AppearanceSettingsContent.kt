@@ -40,6 +40,11 @@ import kotlin.math.roundToInt
 
 private val navBarPresets: List<Pair<Color?, String>> = listOf(
     null to "Auto",
+    Color(0xFF800020.toInt()) to "Burgundy",
+    Color(0xFFE57373.toInt()) to "Muted Red",
+    Color(0xFF5783D4.toInt()) to "Secondary Blue",
+    Color(0xFF201F23.toInt()) to "Toolbar (Dark)",
+    Color(0xFFE1E1E1.toInt()) to "Toolbar (Light)",
     Color(0xFF2D3436.toInt()) to "Charcoal",
     Color(0xFF1A1A2E.toInt()) to "Navy",
     Color(0xFF0D3B46.toInt()) to "D.Teal",
@@ -55,17 +60,22 @@ private val navBarPresets: List<Pair<Color?, String>> = listOf(
 
 private val accentPresets: List<Pair<Color?, String>> = listOf(
     null to "Auto",
+    Color(0xFF800020.toInt()) to "Burgundy",
+    Color(0xFFE57373.toInt()) to "Muted Red",
+    Color(0xFF5783D4.toInt()) to "Secondary Blue",
+    Color(0xFF201F23.toInt()) to "Toolbar (Dark)",
+    Color(0xFFE1E1E1.toInt()) to "Toolbar (Light)",
+    Color(0xFF2D3436.toInt()) to "Charcoal",
+    Color(0xFF1A1A2E.toInt()) to "Navy",
+    Color(0xFF0D3B46.toInt()) to "D.Teal",
+    Color(0xFF1B4332.toInt()) to "Forest",
+    Color(0xFF3D1A78.toInt()) to "Violet",
     Color(0xFF3B82F6.toInt()) to "Blue",
     Color(0xFF14B8A6.toInt()) to "Teal",
     Color(0xFF8B5CF6.toInt()) to "Purple",
     Color(0xFFEC4899.toInt()) to "Pink",
     Color(0xFFF97316.toInt()) to "Orange",
     Color(0xFF22C55E.toInt()) to "Green",
-    Color(0xFF2D3436.toInt()) to "Charcoal",
-    Color(0xFF0D3B46.toInt()) to "D.Teal",
-    Color(0xFF1A1A2E.toInt()) to "Navy",
-    Color(0xFF1B4332.toInt()) to "Forest",
-    Color(0xFF3D1A78.toInt()) to "Violet",
 )
 
 @Composable

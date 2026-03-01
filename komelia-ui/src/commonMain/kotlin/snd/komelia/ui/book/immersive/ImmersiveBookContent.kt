@@ -196,7 +196,7 @@ fun ImmersiveBookContent(
             ImmersiveDetailScaffold(
                 coverData = coverData,
                 coverKey = pageBook.id.value,
-                cardColor = accentColor,
+                cardColor = null,
                 immersive = true,
                 initiallyExpanded = initiallyExpanded,
                 onExpandChange = onExpandChange,

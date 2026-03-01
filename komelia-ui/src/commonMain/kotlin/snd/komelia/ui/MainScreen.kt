@@ -39,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.tween
@@ -54,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
@@ -249,6 +251,16 @@ class MainScreen(
         toggleLibrariesDrawer: () -> Unit,
     ) {
         val containerColor = LocalNavBarColor.current ?: MaterialTheme.colorScheme.surface
+        val accentColor = LocalAccentColor.current
+        val itemColors = if (accentColor != null) {
+            NavigationBarItemDefaults.colors(
+                selectedIconColor = if (accentColor.luminance() > 0.5f) Color.Black else Color.White,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                indicatorColor = accentColor
+            )
+        } else {
+            NavigationBarItemDefaults.colors()
+        }
         NavigationBar(
             containerColor = containerColor,
         ) {
@@ -257,21 +269,24 @@ class MainScreen(
                 selected = false,
                 onClick = toggleLibrariesDrawer,
                 icon = { Icon(Icons.Rounded.LocalLibrary, null) },
-                label = { Text("Libraries") }
+                label = { Text("Libraries") },
+                colors = itemColors
             )
             NavigationBarItem(
                 alwaysShowLabel = true,
                 selected = navigator.lastItem is HomeScreen,
                 onClick = { if (navigator.lastItem !is HomeScreen) navigator.replaceAll(HomeScreen()) },
                 icon = { Icon(Icons.Rounded.Home, null) },
-                label = { Text("Home") }
+                label = { Text("Home") },
+                colors = itemColors
             )
             NavigationBarItem(
                 alwaysShowLabel = true,
                 selected = navigator.lastItem is SearchScreen,
                 onClick = { if (navigator.lastItem !is SearchScreen) navigator.push(SearchScreen(null)) },
                 icon = { Icon(Icons.Rounded.Search, null) },
-                label = { Text("Search") }
+                label = { Text("Search") },
+                colors = itemColors
             )
             NavigationBarItem(
                 alwaysShowLabel = true,
@@ -281,7 +296,8 @@ class MainScreen(
                         navigator.push(MobileSettingsScreen())
                 },
                 icon = { Icon(Icons.Rounded.Settings, null) },
-                label = { Text("Settings") }
+                label = { Text("Settings") },
+                colors = itemColors
             )
         }
     }
@@ -348,11 +364,12 @@ class MainScreen(
         isSelected: Boolean,
         modifier: Modifier
     ) {
+        val accentColor = LocalAccentColor.current
         Surface(
             modifier = modifier,
             contentColor =
-                if (isSelected) MaterialTheme.colorScheme.secondary
-                else contentColorFor(MaterialTheme.colorScheme.surfaceVariant)
+            if (isSelected) accentColor ?: MaterialTheme.colorScheme.secondary
+            else contentColorFor(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Column(
                 modifier = Modifier

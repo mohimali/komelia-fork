@@ -164,7 +164,7 @@ fun ImmersiveSeriesContent(
     ImmersiveDetailScaffold(
         coverData = coverData,
         coverKey = series.id.value,
-        cardColor = accentColor,
+        cardColor = null,
         immersive = true,
         initiallyExpanded = initiallyExpanded,
         onExpandChange = onExpandChange,

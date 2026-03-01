@@ -19,8 +19,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import snd.komelia.ui.LocalNavBarColor
+import snd.komelia.ui.LocalTheme
+import snd.komelia.ui.Theme
 
 @Composable
 fun ImmersiveDetailFab(
@@ -30,8 +33,24 @@ fun ImmersiveDetailFab(
     accentColor: Color? = null,
     showReadActions: Boolean = true,
 ) {
+    val theme = LocalTheme.current
     val navBarColor = LocalNavBarColor.current
-    val readNowContainerColor = navBarColor ?: MaterialTheme.colorScheme.primaryContainer
+
+    val (fabContainerColor, fabContentColor) = if (theme.type == Theme.ThemeType.LIGHT) {
+        Color(red = 43, green = 43, blue = 43) to Color.White
+    } else {
+        MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+    }
+
+    val readNowContainerColor = accentColor
+        ?: if (theme.type == Theme.ThemeType.LIGHT) Color(red = 43, green = 43, blue = 43)
+        else navBarColor ?: MaterialTheme.colorScheme.primaryContainer
+
+    val readNowContentColor = if (accentColor != null || (theme.type == Theme.ThemeType.DARK && navBarColor != null)) {
+        if (readNowContainerColor.luminance() > 0.5f) Color.Black else Color.White
+    } else {
+        contentColorFor(readNowContainerColor)
+    }
 
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -46,7 +65,7 @@ fun ImmersiveDetailFab(
             ExtendedFloatingActionButton(
                 onClick = onReadClick,
                 containerColor = readNowContainerColor,
-                contentColor = contentColorFor(readNowContainerColor),
+                contentColor = readNowContentColor,
                 icon = {
                     Icon(
                         Icons.AutoMirrored.Rounded.MenuBook,
@@ -58,6 +77,8 @@ fun ImmersiveDetailFab(
 
             FloatingActionButton(
                 onClick = onReadIncognitoClick,
+                containerColor = fabContainerColor,
+                contentColor = fabContentColor,
             ) {
                 Icon(
                     Icons.Rounded.VisibilityOff,
@@ -69,6 +90,8 @@ fun ImmersiveDetailFab(
         // Download FAB
         FloatingActionButton(
             onClick = onDownloadClick,
+            containerColor = fabContainerColor,
+            contentColor = fabContentColor,
         ) {
             Icon(
                 Icons.Rounded.Download,
