@@ -385,7 +385,7 @@ class PagedReaderState(
                         else {
                             val containerRatio = containerSize.width.toDouble() / containerSize.height
                             val imageRatio = originalImage.width.toDouble() / originalImage.height
-                            imageRatio < containerRatio
+                            imageRatio > containerRatio
                         }
 
                         val colors = originalImage.getEdgeColors(isVerticalGaps)
@@ -456,7 +456,7 @@ class PagedReaderState(
                         else {
                             val containerRatio = containerSize.width.toDouble() / containerSize.height
                             val imageRatio = originalImage.width.toDouble() / originalImage.height
-                            imageRatio < containerRatio
+                            imageRatio > containerRatio
                         }
 
                         originalImage.getEdgeColors(isVerticalGaps)

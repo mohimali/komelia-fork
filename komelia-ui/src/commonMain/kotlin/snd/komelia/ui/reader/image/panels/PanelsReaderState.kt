@@ -542,7 +542,7 @@ class PanelsReaderState(
                             else {
                                 val containerRatio = containerSize.width.toDouble() / containerSize.height
                                 val imageRatio = imageSize.width.toDouble() / imageSize.height
-                                imageRatio < containerRatio
+                                imageRatio > containerRatio
                             }
                             originalImage.getEdgeColors(isVerticalGaps)
                         } else null
