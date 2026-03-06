@@ -38,9 +38,9 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import snd.komelia.ui.LocalStrings
 import snd.komelia.ui.LocalWindowWidth
+import snd.komelia.ui.common.components.FilterDialogMultiChoiceWithSearch
 import snd.komelia.ui.common.components.FilterDropdownChoice
 import snd.komelia.ui.common.components.FilterDropdownMultiChoice
-import snd.komelia.ui.common.components.FilterDropdownMultiChoiceWithSearch
 import snd.komelia.ui.common.components.LabeledEntry
 import snd.komelia.ui.common.components.LabeledEntry.Companion.stringEntry
 import snd.komelia.ui.common.components.NoPaddingTextField
@@ -171,13 +171,14 @@ fun SeriesFilterContent(
             val authorOptions = remember(filterState.authorsOptions) {
                 filterState.authorsOptions.distinctBy { it.name }.map { LabeledEntry(it, it.name) }
             }
-            FilterDropdownMultiChoiceWithSearch(
+            FilterDialogMultiChoiceWithSearch(
                 selectedOptions = authorsSelectedOptions,
                 options = authorOptions,
                 onOptionSelect = { author -> filterState.onAuthorSelect(author.value) },
                 onSearch = filterState::onAuthorsSearch,
                 label = strings.authors,
                 modifier = Modifier.width(width),
+                onClearAll = { filterState.resetAuthors() }
             )
 
             FilterDropdownMultiChoice(

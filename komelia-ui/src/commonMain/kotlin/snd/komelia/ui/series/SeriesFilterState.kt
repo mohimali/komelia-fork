@@ -412,6 +412,11 @@ class SeriesFilterState(
         }
     }
 
+    fun resetAuthors() {
+        mutableFilterState.update { it.copy(authors = emptyList()) }
+        checkIfAllDefault()
+    }
+
     private fun checkIfAllDefault() {
         isChanged = state.value != DEFAULT
     }
