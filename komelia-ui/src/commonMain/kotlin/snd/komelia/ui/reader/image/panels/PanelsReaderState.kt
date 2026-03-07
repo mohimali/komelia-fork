@@ -600,7 +600,7 @@ class PanelsReaderState(
             scaleState.setZoom(0f, updateBase = true)
         } else {
             val targetPanel = panels.getOrNull(panelIdx) ?: panels.first()
-            val imageSize = image.getOriginalImageSize().getOrNull() ?: return defaultScale
+            val imageSize = page.panelData.originalImageSize
             val (offset, zoom) = getPanelOffsetAndZoom(
                 imageSize = imageSize,
                 areaSize = containerSize,

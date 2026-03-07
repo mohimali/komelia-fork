@@ -10,6 +10,8 @@ import androidx.compose.ui.graphics.toAndroidRectF
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.toSize
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
@@ -75,12 +77,7 @@ class AndroidReaderImage(
         val currentImage = image.value ?: return
         val upscaled = ncnnUpscaler?.checkAndUpscale(currentImage) ?: return
         if (upscaled !== currentImage) {
-            image.value = upscaled
-            originalSize.value = IntSize(upscaled.width, upscaled.pageHeight)
             cachedUpscaledImage = upscaled
-            if (currentImage !== originalImage) {
-                currentImage.close()
-            }
         }
     }
 
@@ -144,10 +141,7 @@ class AndroidReaderImage(
         val currentImage = image.value ?: return
         val upscaled = ncnnUpscaler?.checkAndUpscale(currentImage) ?: return
         if (upscaled !== currentImage) {
-            image.value = upscaled
-            originalSize.value = IntSize(upscaled.width, upscaled.pageHeight)
             cachedUpscaledImage = upscaled
-            if (currentImage !== originalImage) currentImage.close()
             reloadLastRequest()
         }
     }

@@ -47,9 +47,9 @@ expect class RenderImage
 private val logger = KotlinLogging.logger {}
 
 abstract class TilingReaderImage(
-    private val imageSource: ImageSource,
+    protected val imageSource: ImageSource,
     private val imageDecoder: KomeliaImageDecoder,
-    private val processingPipeline: ImageProcessingPipeline,
+    protected val processingPipeline: ImageProcessingPipeline,
     private val stretchImages: StateFlow<Boolean>,
     protected val upsamplingMode: StateFlow<UpsamplingMode>,
     protected val downSamplingKernel: StateFlow<ReduceKernel>,
@@ -203,7 +203,7 @@ abstract class TilingReaderImage(
         }
     }
 
-    private suspend fun decodeImage(source: ImageSource): KomeliaImage {
+    protected suspend fun decodeImage(source: ImageSource): KomeliaImage {
         val image = when (source) {
             is ImageSource.FilePathSource -> imageDecoder.decodeFromFile(source.path)
             is ImageSource.MemorySource -> imageDecoder.decode(source.data)
