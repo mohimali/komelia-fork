@@ -269,8 +269,9 @@ class AndroidAppModule(
         pipeline: ImageProcessingPipeline,
         settings: ImageReaderSettingsRepository,
         onnxRuntimeUpscaler: KomeliaUpscaler?,
+        onnxModelDownloader: OnnxModelDownloader?,
     ): ReaderImageFactory {
-        val ncnn = ncnnUpscaler ?: AndroidNcnnUpscaler(context, settings).also {
+        val ncnn = ncnnUpscaler ?: AndroidNcnnUpscaler(context, settings, onnxModelDownloader).also {
             it.initialize()
             ncnnUpscaler = it
         }
@@ -298,7 +299,7 @@ class AndroidAppModule(
         AndroidOnnxModelDownloader(
             updateClient = updateClient,
             appNotifications = appNotifications,
-            dataDir = context.filesDir.resolve("onnx").toPath().createDirectories()
+            dataDir = context.filesDir.toPath()
         )
 
     override fun createOnnxRuntime(): OnnxRuntime? {

@@ -31,6 +31,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V22__ncnn_upscale_on_load.sql",
         "V23__last_selected_library.sql",
         "V24__immersive_color_settings.sql",
+        "V25__model_management_settings.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

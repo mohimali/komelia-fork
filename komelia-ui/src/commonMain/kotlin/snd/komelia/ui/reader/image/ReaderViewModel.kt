@@ -38,6 +38,7 @@ import snd.komelia.ui.reader.image.panels.PanelsReaderState
 import snd.komelia.ui.settings.imagereader.ncnn.NcnnSettingsState
 import snd.komelia.ui.settings.imagereader.onnxruntime.OnnxRuntimeSettingsState
 import snd.komelia.ui.strings.AppStrings
+import snd.komelia.updates.OnnxModelDownloader
 import snd.komga.client.book.KomgaBookId
 
 private val cleanupScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -60,6 +61,7 @@ class ReaderViewModel(
     private val onnxRuntime: OnnxRuntime?,
     private val panelDetector: KomeliaPanelDetector?,
     private val upscaler: KomeliaUpscaler?,
+    private val onnxModelDownloader: OnnxModelDownloader?,
     val colorCorrectionIsActive: Flow<Boolean>,
     onBookChange: () -> Unit = {},
 ) : ScreenModel {
@@ -72,7 +74,7 @@ class ReaderViewModel(
     val onnxRuntimeSettingsState = upscaler?.let {
         OnnxRuntimeSettingsState(
             onnxRuntimeInstaller = null,
-            onnxModelDownloader = null,
+            onnxModelDownloader = onnxModelDownloader,
             onnxRuntime = onnxRuntime,
             upscaler = upscaler,
             panelDetector = panelDetector,
@@ -82,6 +84,7 @@ class ReaderViewModel(
     }
 
     val ncnnSettingsState = NcnnSettingsState(
+        onnxModelDownloader = onnxModelDownloader,
         settingsRepository = readerSettingsRepository,
         coroutineScope = screenModelScope,
     )

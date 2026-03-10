@@ -48,6 +48,7 @@ class ImageReaderSettingsViewModel(
     )
 
     val ncnnSettingsState = NcnnSettingsState(
+        onnxModelDownloader = onnxModelDownloader,
         settingsRepository = settingsRepository,
         coroutineScope = screenModelScope
     )

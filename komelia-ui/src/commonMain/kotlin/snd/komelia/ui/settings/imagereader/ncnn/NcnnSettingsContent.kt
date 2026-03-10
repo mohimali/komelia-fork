@@ -1,28 +1,24 @@
 package snd.komelia.ui.settings.imagereader.ncnn
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
+import kotlinx.coroutines.flow.Flow
 import snd.komelia.settings.model.NcnnEngine
 import snd.komelia.settings.model.NcnnUpscalerSettings
 import snd.komelia.ui.LocalStrings
 import snd.komelia.ui.common.components.DropdownChoiceMenu
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.ui.graphics.Color
 import snd.komelia.ui.common.components.LabeledEntry
 import snd.komelia.ui.common.components.NumberField
 import snd.komelia.ui.common.components.SwitchWithLabel
+import snd.komelia.ui.settings.imagereader.onnxruntime.DownloadDialog
+import snd.komelia.updates.UpdateProgress
 
 @Composable
 expect fun NcnnLogViewerDialog(onDismiss: () -> Unit)
@@ -34,44 +30,81 @@ expect fun NcnnCrashLogViewerDialog(onDismiss: () -> Unit)
 fun NcnnSettingsContent(
     settings: NcnnUpscalerSettings,
     onSettingsChange: (NcnnUpscalerSettings) -> Unit,
+    onDownloadRequest: () -> Flow<UpdateProgress>,
 ) {
     val strings = LocalStrings.current.imageSettings
-    var showLogs by remember { mutableStateOf(false) }
-    var showCrashLogs by remember { mutableStateOf(false) }
+    var showDownloadDialog by remember { mutableStateOf(false) }
+    if (showDownloadDialog) {
+        DownloadDialog(
+            headerText = "Downloading NCNN models",
+            onDownloadRequest = onDownloadRequest,
+            onDismiss = { showDownloadDialog = false },
+        )
+    }
 
     Column(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Row(
+        SwitchWithLabel(
+            checked = settings.enabled,
+            onCheckedChange = { onSettingsChange(settings.copy(enabled = it)) },
+            label = { Text("Enable NCNN upscaler (Mobile only)") },
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            enabled = settings.isDownloaded
+        )
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SwitchWithLabel(
-                checked = settings.enabled,
-                onCheckedChange = { onSettingsChange(settings.copy(enabled = it)) },
-                label = { Text("Enable NCNN upscaler (Mobile only)") },
-                modifier = Modifier.weight(1f)
-            )
+            Button(onClick = { showDownloadDialog = true }) {
+                if (settings.isDownloaded) Text("Re-download Models")
+                else Text("Download Models")
+            }
 
-            if (isNcnnSupported()) {
-                TextButton(onClick = { showLogs = true }) {
-                    Text("View Logs")
-                }
-                TextButton(onClick = { showCrashLogs = true }) {
-                    Text("Crash Logs")
-                }
+            if (settings.isDownloaded) {
+                Text("Installed")
+                Icon(Icons.Default.Check, null, tint = Color.Green)
             }
         }
 
-        if (showLogs) {
-            NcnnLogViewerDialog(onDismiss = { showLogs = false })
+        val urlOptions = remember {
+            listOf(
+                LabeledEntry("https://github.com/eserero/Komelia/releases/download/model/NcnnUpscalerModels.zip", "Default (GitHub)"),
+                LabeledEntry("Custom", "Custom"),
+            )
         }
-        if (showCrashLogs) {
-            NcnnCrashLogViewerDialog(onDismiss = { showCrashLogs = false })
+        var isCustomUrl by remember { mutableStateOf(!urlOptions.any { it.value == settings.ncnnUpscalerUrl }) }
+        val selectedUrlOption = remember(settings.ncnnUpscalerUrl, isCustomUrl) {
+            if (isCustomUrl) urlOptions.last()
+            else urlOptions.find { it.value == settings.ncnnUpscalerUrl } ?: urlOptions.last()
         }
 
-        if (settings.enabled) {
+        DropdownChoiceMenu(
+            selectedOption = selectedUrlOption,
+            options = urlOptions,
+            onOptionChange = {
+                if (it.value != "Custom") {
+                    isCustomUrl = false
+                    onSettingsChange(settings.copy(ncnnUpscalerUrl = it.value))
+                } else {
+                    isCustomUrl = true
+                }
+            },
+            label = { Text("Model URL Source") },
+            inputFieldModifier = Modifier.fillMaxWidth()
+        )
+
+        if (isCustomUrl) {
+            OutlinedTextField(
+                value = settings.ncnnUpscalerUrl,
+                onValueChange = { onSettingsChange(settings.copy(ncnnUpscalerUrl = it)) },
+                label = { Text("Custom URL") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        if (settings.enabled && settings.isDownloaded) {
             DropdownChoiceMenu(
                 selectedOption = when (settings.engine) {
                     NcnnEngine.WAIFU2X -> LabeledEntry(NcnnEngine.WAIFU2X, strings.ncnnUpscaleModeWaifu2x)

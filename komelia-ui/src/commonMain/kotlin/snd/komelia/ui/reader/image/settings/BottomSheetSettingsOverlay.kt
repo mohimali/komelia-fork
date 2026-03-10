@@ -647,7 +647,8 @@ private fun BottomSheetImageSettings(
             HorizontalDivider(Modifier.padding(vertical = 10.dp))
             snd.komelia.ui.settings.imagereader.ncnn.NcnnSettingsContent(
                 settings = ncnnSettingsState.ncnnUpscalerSettings.collectAsState().value,
-                onSettingsChange = ncnnSettingsState::onSettingsChange
+                onSettingsChange = ncnnSettingsState::onSettingsChange,
+                onDownloadRequest = ncnnSettingsState::onNcnnDownloadRequest
             )
         }
 

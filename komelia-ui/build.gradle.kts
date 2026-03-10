@@ -50,6 +50,7 @@ kotlin {
             api(projects.komeliaDomain.core)
             api(projects.komeliaDomain.komgaApi)
             api(projects.komeliaDomain.offline)
+            api(projects.komeliaInfra.database.shared)
             api(projects.komeliaInfra.imageDecoder.shared)
             api(projects.komeliaInfra.onnxruntime.api)
             implementation(projects.komeliaInfra.webview)

@@ -50,4 +50,12 @@ data class ImageReaderSettings(
     val pagedReaderAdaptiveBackground: Boolean = false,
     val panelReaderAdaptiveBackground: Boolean = false,
     val tapNavigationMode: ReaderTapNavigationMode = ReaderTapNavigationMode.LEFT_RIGHT,
-)
+    val panelDetectionUrl: String = PANEL_DETECTION_DEFAULT_GITHUB_URL,
+) {
+    companion object {
+        const val PANEL_DETECTION_DEFAULT_ORIGINAL_URL =
+            "https://github.com/Snd-R/komelia-onnxruntime/releases/download/model/rf-detr-med.onnx.zip"
+        const val PANEL_DETECTION_DEFAULT_GITHUB_URL =
+            "https://github.com/eserero/Komelia/releases/download/model/rf-detr-med.onnx.zip"
+    }
+}

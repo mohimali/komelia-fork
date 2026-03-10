@@ -267,8 +267,7 @@ fun ImmersiveDetailScaffold(
                 override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
                     val delta = available.y
                     return if (delta > 0 && source == NestedScrollSource.UserInput) {
-                        val cardConsumed = state.dispatchRawDelta(delta)
-                        Offset(0f, cardConsumed)
+                        Offset(0f, state.dispatchRawDelta(delta))
                     } else Offset.Zero
                 }
 

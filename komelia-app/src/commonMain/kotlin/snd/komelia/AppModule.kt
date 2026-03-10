@@ -202,6 +202,7 @@ abstract class AppModule {
             pipeline = imagePipeline,
             settings = appRepositories.imageReaderSettingsRepository,
             onnxRuntimeUpscaler = upscaler,
+            onnxModelDownloader = onnxModelDownloader
         )
 
         return DependencyContainer(
@@ -342,6 +343,7 @@ abstract class AppModule {
         pipeline: ImageProcessingPipeline,
         settings: ImageReaderSettingsRepository,
         onnxRuntimeUpscaler: KomeliaUpscaler?,
+        onnxModelDownloader: OnnxModelDownloader?,
     ): ReaderImageFactory
 
     protected abstract fun createWindowState(): AppWindowState

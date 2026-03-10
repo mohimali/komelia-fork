@@ -2,6 +2,7 @@ package snd.komelia.ui
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -82,6 +83,7 @@ import snd.komelia.ui.settings.SettingsScreen
 import snd.komelia.ui.topbar.AppBar
 import snd.komelia.ui.topbar.LibrariesNavBarContent
 import snd.komelia.ui.topbar.NavBarContent
+import snd.komelia.ui.LocalSharedTransitionScope
 
 class MainScreen(
     private val defaultScreen: Screen = HomeScreen()
@@ -175,7 +177,6 @@ class MainScreen(
         navigator: Navigator,
         vm: MainScreenViewModel
     ) {
-        val coroutineScope = rememberCoroutineScope()
         val useNewLibraryUI = LocalUseNewLibraryUI.current
         val isImmersiveScreen = navigator.lastItem is SeriesScreen ||
                 navigator.lastItem is BookScreen ||
@@ -221,14 +222,18 @@ class MainScreen(
                                 .consumeWindowInsets(paddingValues)
                                 .statusBarsPadding()
                         ) {
-                            AnimatedContent(
-                                targetState = navigator.lastItem,
-                                transitionSpec = { fadeIn(tween(400)) togetherWith fadeOut(tween(250)) },
-                                label = "nav",
-                            ) { screen ->
-                                CompositionLocalProvider(LocalAnimatedVisibilityScope provides this) {
-                                    navigator.saveableState("screen", screen) {
-                                        screen.Content()
+                            SharedTransitionLayout {
+                                CompositionLocalProvider(LocalSharedTransitionScope provides this) {
+                                    AnimatedContent(
+                                        targetState = navigator.lastItem,
+                                        transitionSpec = { fadeIn(tween(400)) togetherWith fadeOut(tween(250)) },
+                                        label = "nav",
+                                    ) { screen ->
+                                        CompositionLocalProvider(LocalAnimatedVisibilityScope provides this) {
+                                            navigator.saveableState("screen", screen) {
+                                                screen.Content()
+                                            }
+                                        }
                                     }
                                 }
                             }

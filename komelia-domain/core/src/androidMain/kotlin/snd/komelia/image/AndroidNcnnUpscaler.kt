@@ -9,33 +9,25 @@ import io.github.snd_r.komelia.infra.ncnn.NcnnUpscaler.Companion.ENGINE_REALCUGA
 import io.github.snd_r.komelia.infra.ncnn.NcnnUpscaler.Companion.ENGINE_REALSR
 import io.github.snd_r.komelia.infra.ncnn.NcnnUpscaler.Companion.ENGINE_REAL_ESRGAN
 import io.github.snd_r.komelia.infra.ncnn.NcnnUpscaler.Companion.ENGINE_WAIFU2X
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
-import java.util.concurrent.atomic.AtomicInteger
 import snd.komelia.image.AndroidBitmap.toSoftwareBitmap
 import snd.komelia.settings.ImageReaderSettingsRepository
 import snd.komelia.settings.model.NcnnEngine
 import snd.komelia.settings.model.NcnnUpscalerSettings
+import snd.komelia.updates.OnnxModelDownloader
+import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 
 private val logger = KotlinLogging.logger {}
 
 class AndroidNcnnUpscaler(
     private val context: Context,
     private val settingsRepository: ImageReaderSettingsRepository,
+    private val onnxModelDownloader: OnnxModelDownloader? = null,
 ) : AutoCloseable {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var ncnn: NcnnUpscaler? = null
@@ -48,6 +40,7 @@ class AndroidNcnnUpscaler(
         private val jniMutex = Mutex()
         val globalUpscaleActivities: MutableStateFlow<Map<Int, UpscaleStatus>> =
             MutableStateFlow(emptyMap())
+        val isDownloadedFlow = MutableStateFlow(false)
 
         private val generation = AtomicInteger(0)
         val currentPageNumber = AtomicInteger(-1)
@@ -114,6 +107,7 @@ class AndroidNcnnUpscaler(
             logger.warn { "NCNN shared libraries are not available. Upscaler will be disabled." }
             return
         }
+        isDownloadedFlow.value = isDownloaded()
 
         scope.launch {
             jniMutex.withLock {
@@ -129,11 +123,18 @@ class AndroidNcnnUpscaler(
             }
         }
 
+        onnxModelDownloader?.downloadCompletionEvents
+            ?.filterIsInstance<OnnxModelDownloader.CompletionEvent.NcnnModelDownloaded>()
+            ?.onEach { isDownloadedFlow.value = isDownloaded() }
+            ?.launchIn(scope)
+
         settingsRepository.getNcnnUpscalerSettings()
             .onEach { settings ->
                 try {
                     jniMutex.withLock {
-                        if (settings.enabled) {
+                        val downloaded = isDownloaded()
+                        isDownloadedFlow.value = downloaded
+                        if (settings.enabled && downloaded) {
                             if (ncnn == null || shouldReinit(settings)) {
                                 reinit(settings)
                             } else {
@@ -154,6 +155,11 @@ class AndroidNcnnUpscaler(
                     logger.error(e) { "Failed to initialize NCNN upscaler" }
                 }
             }.launchIn(scope)
+    }
+
+    private fun isDownloaded(): Boolean {
+        val ncnnDir = File(context.filesDir, "ncnn_models")
+        return ncnnDir.exists() && ncnnDir.isDirectory && (ncnnDir.list()?.isNotEmpty() ?: false)
     }
 
     fun willUpscale(image: KomeliaImage): Boolean {
@@ -297,7 +303,11 @@ class AndroidNcnnUpscaler(
             binPath = "$modelPath.bin"
         }
 
-        val loadResult = newNcnn.load(context.assets, paramPath, binPath)
+        val ncnnDir = File(context.filesDir, "ncnn_models")
+        val absoluteParamPath = File(ncnnDir, paramPath).absolutePath
+        val absoluteBinPath = File(ncnnDir, binPath).absolutePath
+
+        val loadResult = newNcnn.load(null, absoluteParamPath, absoluteBinPath)
         if (loadResult != 0) {
             logger.error { "Failed to load NCNN model $modelPath: $loadResult" }
             newNcnn.release()

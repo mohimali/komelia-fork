@@ -253,4 +253,12 @@ class ReaderSettingsRepositoryWrapper(
     override suspend fun putReaderTapNavigationMode(mode: ReaderTapNavigationMode) {
         wrapper.transform { it.copy(tapNavigationMode = mode) }
     }
+
+    override fun getPanelDetectionUrl(): Flow<String> {
+        return wrapper.mapState { it.panelDetectionUrl }
+    }
+
+    override suspend fun putPanelDetectionUrl(url: String) {
+        wrapper.transform { it.copy(panelDetectionUrl = url) }
+    }
 }

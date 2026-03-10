@@ -45,6 +45,7 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                             numThreads = it[ImageReaderSettingsTable.ncnnNumThreads],
                             upscaleOnLoad = it[ImageReaderSettingsTable.ncnnUpscaleOnLoad],
                             upscaleThreshold = it[ImageReaderSettingsTable.ncnnUpscaleThreshold],
+                            ncnnUpscalerUrl = it[ImageReaderSettingsTable.ncnnUpscalerUrl],
                         ),
                         pagedScaleType = LayoutScaleType.valueOf(it[ImageReaderSettingsTable.pagedScaleType]),
                         pagedReadingDirection = PagedReadingDirection.valueOf(it[ImageReaderSettingsTable.pagedReadingDirection]),
@@ -75,6 +76,7 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                         panelReaderAdaptiveBackground = it[ImageReaderSettingsTable.panelReaderAdaptiveBackground],
                         tapNavigationMode = it[ImageReaderSettingsTable.tapNavigationMode]
                             .let { mode -> ReaderTapNavigationMode.valueOf(mode) },
+                        panelDetectionUrl = it[ImageReaderSettingsTable.panelDetectionUrl],
                     )
                 }
         }
@@ -95,6 +97,7 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                 it[ncnnNumThreads] = settings.ncnnUpscalerSettings.numThreads
                 it[ncnnUpscaleOnLoad] = settings.ncnnUpscalerSettings.upscaleOnLoad
                 it[ncnnUpscaleThreshold] = settings.ncnnUpscalerSettings.upscaleThreshold
+                it[ncnnUpscalerUrl] = settings.ncnnUpscalerSettings.ncnnUpscalerUrl
 
                 it[pagedScaleType] = settings.pagedScaleType.name
                 it[pagedReadingDirection] = settings.pagedReadingDirection.name
@@ -122,6 +125,7 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                 it[pagedReaderAdaptiveBackground] = settings.pagedReaderAdaptiveBackground
                 it[panelReaderAdaptiveBackground] = settings.panelReaderAdaptiveBackground
                 it[tapNavigationMode] = settings.tapNavigationMode.name
+                it[panelDetectionUrl] = settings.panelDetectionUrl
             }
         }
     }

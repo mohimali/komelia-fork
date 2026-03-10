@@ -102,4 +102,7 @@ interface ImageReaderSettingsRepository {
 
     fun getReaderTapNavigationMode(): Flow<ReaderTapNavigationMode>
     suspend fun putReaderTapNavigationMode(mode: ReaderTapNavigationMode)
+
+    fun getPanelDetectionUrl(): Flow<String>
+    suspend fun putPanelDetectionUrl(url: String)
 }
