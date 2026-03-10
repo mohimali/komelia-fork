@@ -1,7 +1,5 @@
 package snd.komelia.ui.common.immersive
 
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.AnimationVector
@@ -141,8 +139,8 @@ fun ImmersiveDetailScaffold(
             Modifier.sharedBounds(
                 rememberSharedContentState(key = "cover-$coverKey"),
                 animatedVisibilityScope = animatedVisibilityScope,
-                enter = EnterTransition.None,
-                exit = ExitTransition.None,
+                enter = fadeIn(tween(400, easing = emphasizedEasing)),
+                exit = fadeOut(tween(300, easing = emphasizedAccelerateEasing)),
                 boundsTransform = { _, _ -> tween(durationMillis = 600, easing = emphasizedEasing) },
             )
         }
@@ -172,7 +170,8 @@ fun ImmersiveDetailScaffold(
                     .animateEnterExit(
                         enter = slideInVertically(tween(500, easing = emphasizedEasing)) { it / 4 }
                                 + fadeIn(tween(300)),
-                        exit = fadeOut(tween(200, easing = emphasizedAccelerateEasing))
+                        exit = slideOutVertically(tween(400, easing = emphasizedAccelerateEasing)) { it / 4 }
+                               + fadeOut(tween(300))
                     )
             }
         }

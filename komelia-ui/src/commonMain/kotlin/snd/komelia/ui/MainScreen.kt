@@ -1,6 +1,7 @@
 package snd.komelia.ui
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.tween
@@ -226,7 +227,15 @@ class MainScreen(
                                 CompositionLocalProvider(LocalSharedTransitionScope provides this) {
                                     AnimatedContent(
                                         targetState = navigator.lastItem,
-                                        transitionSpec = { fadeIn(tween(400)) togetherWith fadeOut(tween(250)) },
+                                        transitionSpec = {
+                                            val isToImmersive = targetState is BookScreen || targetState is SeriesScreen || targetState is OneshotScreen
+                                            val isFromImmersive = initialState is BookScreen || initialState is SeriesScreen || initialState is OneshotScreen
+                                            when {
+                                                isToImmersive   -> EnterTransition.None togetherWith fadeOut(tween(200))
+                                                isFromImmersive -> fadeIn(tween(200)) togetherWith fadeOut(tween(450))
+                                                else            -> fadeIn(tween(400)) togetherWith fadeOut(tween(250))
+                                            }
+                                        },
                                         label = "nav",
                                     ) { screen ->
                                         CompositionLocalProvider(LocalAnimatedVisibilityScope provides this) {
