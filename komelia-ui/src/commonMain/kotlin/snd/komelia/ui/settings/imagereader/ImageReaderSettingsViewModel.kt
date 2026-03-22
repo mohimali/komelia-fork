@@ -17,6 +17,7 @@ import snd.komelia.image.availableReduceKernels
 import snd.komelia.image.availableUpsamplingModes
 import snd.komelia.onnxruntime.OnnxRuntime
 import snd.komelia.settings.ImageReaderSettingsRepository
+import snd.komelia.ui.settings.imagereader.ncnn.NcnnSettingsState
 import snd.komelia.ui.settings.imagereader.onnxruntime.OnnxRuntimeSettingsState
 import snd.komelia.updates.OnnxModelDownloader
 import snd.komelia.updates.OnnxRuntimeInstaller
@@ -46,6 +47,12 @@ class ImageReaderSettingsViewModel(
         coroutineScope = screenModelScope
     )
 
+    val ncnnSettingsState = NcnnSettingsState(
+        onnxModelDownloader = onnxModelDownloader,
+        settingsRepository = settingsRepository,
+        coroutineScope = screenModelScope
+    )
+
     val upsamplingMode = MutableStateFlow(UpsamplingMode.NEAREST)
     val downsamplingKernel = MutableStateFlow(ReduceKernel.NEAREST)
     val linearLightDownsampling = MutableStateFlow(false)
@@ -67,6 +74,7 @@ class ImageReaderSettingsViewModel(
         prefetchSpreadCount.value = settingsRepository.getPrefetchSpreadCount().first()
         imageCacheSize.value = settingsRepository.getImageCacheSize().first()
         onnxRuntimeSettingsState.initialize()
+        ncnnSettingsState.initialize()
     }
 
     fun onUpsamplingModeChange(mode: UpsamplingMode) {
