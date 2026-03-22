@@ -75,9 +75,12 @@ class TtsuReaderState(
     private val platformType: PlatformType,
     private val coroutineScope: CoroutineScope,
     private val bookSiblingsContext: BookSiblingsContext,
+    private val offlineBookApi: KomgaBookApi? = null,
+    private val isBookAvailableOffline: (suspend (KomgaBookId) -> Boolean)? = null,
 ) : EpubReaderState {
     override val state = MutableStateFlow<LoadState<Unit>>(LoadState.Uninitialized)
     override val book = MutableStateFlow(book)
+    override val readingOffline = MutableStateFlow(false)
 
     val bookId = MutableStateFlow(bookId)
     private val webview = MutableStateFlow<KomeliaWebview?>(null)
@@ -97,6 +100,16 @@ class TtsuReaderState(
             Res.getUri("files/ttsu.html")
 
             if (book.value == null) book.value = bookApi.getOne(bookId.value)
+
+            // Check if book is available offline
+            if (offlineBookApi != null && isBookAvailableOffline != null) {
+                try {
+                    readingOffline.value = isBookAvailableOffline.invoke(bookId.value)
+                } catch (_: Exception) {
+                    readingOffline.value = false
+                }
+            }
+
             coroutineScope.launch {
                 runCatching { epubLoadTask.complete(generateEpubHtml(bookId.value)) }
                     .onFailure {
@@ -250,7 +263,10 @@ class TtsuReaderState(
                     }
 
                     urlString.startsWith("http://komelia") -> error("invalid request uri $urlString")
-                    else -> proxyResourceRequest(bookApi, urlString, serverUrl)
+                    else -> {
+                        val effectiveApi = if (readingOffline.value && offlineBookApi != null) offlineBookApi else bookApi
+                        proxyResourceRequest(effectiveApi, urlString, serverUrl)
+                    }
                 }
             }.onFailure { logger.catching(it) }.getOrNull()
         }
@@ -370,8 +386,9 @@ class TtsuReaderState(
     )
 
     private suspend fun generateEpubHtml(bookId: KomgaBookId): TtuEpubData {
-        val manifest = bookApi.getWebPubManifest(bookId)
-        val positions = bookApi.getReadiumPositions(bookId)
+        val effectiveApi = if (readingOffline.value && offlineBookApi != null) offlineBookApi else bookApi
+        val manifest = effectiveApi.getWebPubManifest(bookId)
+        val positions = effectiveApi.getReadiumPositions(bookId)
         val sectionData: MutableList<TtuSection> = mutableListOf()
         val result = Element("div")
         val serverUrl = settingsRepository.getServerUrl()
@@ -385,7 +402,7 @@ class TtsuReaderState(
             .mapNotNull { it.href }
             .map { href ->
                 coroutineScope.async {
-                    Chapter(href, proxyResourceRequest(bookApi, href, serverUrl).data.decodeToString())
+                    Chapter(href, proxyResourceRequest(effectiveApi, href, serverUrl).data.decodeToString())
                 }
             }
 
@@ -476,7 +493,7 @@ class TtsuReaderState(
         val combinedDirtyStyleString = manifest.resources
             .filter { it.type == "text/css" }
             .mapNotNull { res ->
-                res.href?.let { proxyResourceRequest(bookApi, it, serverUrl).data.decodeToString() }
+                res.href?.let { proxyResourceRequest(effectiveApi, it, serverUrl).data.decodeToString() }
             }
             .fold("") { acc, css -> acc + css }
 

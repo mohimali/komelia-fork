@@ -598,6 +598,7 @@ class ViewModelFactory(
         book: KomeliaBook? = null,
         markReadProgress: Boolean = true
     ): EpubReaderViewModel {
+        val offlineDeps = dependencies.offlineDependencies
         return EpubReaderViewModel(
             bookId = bookId,
             book = book,
@@ -612,6 +613,8 @@ class ViewModelFactory(
             windowState = dependencies.windowState,
             platformType = platformType,
             bookSiblingsContext = bookSiblingsContext,
+            offlineBookApi = offlineDeps.komgaApi.bookApi,
+            isBookAvailableOffline = { id -> offlineDeps.repositories.bookRepository.exists(id) },
         )
     }
 

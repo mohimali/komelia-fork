@@ -48,10 +48,15 @@ import snd.komelia.ui.common.cards.SeriesImageCard
 import snd.komelia.ui.common.menus.BookMenuActions
 import snd.komelia.ui.common.menus.SeriesMenuActions
 import snd.komelia.ui.platform.PlatformType
+import snd.komga.client.library.KomgaLibrary
+import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.series.KomgaSeries
 
 @Composable
 fun HomeContent(
+    libraries: List<KomgaLibrary>,
+    onLibraryClick: (KomgaLibraryId) -> Unit,
+
     filters: List<HomeFilterData>,
     onEditStart: () -> Unit,
 
@@ -68,6 +73,12 @@ fun HomeContent(
     val gridState = rememberLazyGridState()
     val coroutineScope = rememberCoroutineScope()
     Column {
+        if (libraries.isNotEmpty()) {
+            LibraryShortcuts(
+                libraries = libraries,
+                onLibraryClick = onLibraryClick
+            )
+        }
         Toolbar(
             filters = filters,
             currentFilterNumber = activeFilterNumber,
@@ -292,5 +303,31 @@ private fun LazyGridScope.SeriesFilterEntries(
             seriesMenuActions = seriesMenuActions,
             modifier = Modifier.fillMaxSize()
         )
+    }
+}
+
+@Composable
+private fun LibraryShortcuts(
+    libraries: List<KomgaLibrary>,
+    onLibraryClick: (KomgaLibraryId) -> Unit,
+) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+    ) {
+        items(libraries, key = { it.id.value }) { library ->
+            androidx.compose.material3.ElevatedAssistChip(
+                onClick = { onLibraryClick(library.id) },
+                label = { Text(library.name) },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        modifier = Modifier.padding(0.dp)
+                    )
+                },
+            )
+        }
     }
 }

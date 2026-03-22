@@ -8,6 +8,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.Res
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -54,9 +55,12 @@ class KomgaEpubReaderState(
     private val platformType: PlatformType,
     private val coroutineScope: CoroutineScope,
     private val bookSiblingsContext: BookSiblingsContext,
+    private val offlineBookApi: KomgaBookApi? = null,
+    private val isBookAvailableOffline: (suspend (KomgaBookId) -> Boolean)? = null,
 ) : EpubReaderState {
     override val state = MutableStateFlow<LoadState<Unit>>(Uninitialized)
     override val book = MutableStateFlow(book)
+    override val readingOffline = MutableStateFlow(false)
 
     val bookId = MutableStateFlow(bookId)
     private val webview = MutableStateFlow<KomeliaWebview?>(null)
@@ -72,6 +76,16 @@ class KomgaEpubReaderState(
         notifications.runCatchingToNotifications {
             Res.getUri("files/komga.html")
             if (book.value == null) book.value = bookApi.getOne(bookId.value)
+
+            // Check if book is available offline
+            if (offlineBookApi != null && isBookAvailableOffline != null) {
+                try {
+                    readingOffline.value = isBookAvailableOffline.invoke(bookId.value)
+                } catch (_: Exception) {
+                    readingOffline.value = false
+                }
+            }
+
             state.value = LoadState.Success(Unit)
         }.onFailure {
             state.value = LoadState.Error(it)
@@ -103,6 +117,7 @@ class KomgaEpubReaderState(
     @OptIn(ExperimentalResourceApi::class)
     private suspend fun loadEpub(webview: KomeliaWebview) {
         val serverUrl = settingsRepository.getServerUrl().stateIn(coroutineScope)
+        val effectiveBookApi = if (readingOffline.value && offlineBookApi != null) offlineBookApi else bookApi
         webview.bind<Unit, String>("bookId") {
             bookId.value.value
         }
@@ -143,18 +158,18 @@ class KomgaEpubReaderState(
         }
 
         webview.bind("d2ReaderGetContent") { href: String ->
-            getD2Content(href)
+            getD2Content(href, effectiveBookApi, serverUrl)
         }
         webview.bind("d2ReaderGetContentBytesLength") { href: String ->
-            proxyResourceRequest(bookApi, href, serverUrl).data.size
+            proxyResourceRequest(effectiveBookApi, href, serverUrl).data.size
         }
 
         webview.bind("externalFetch") { href: String ->
-            proxyResourceRequest(bookApi, href, serverUrl).data.decodeToString()
+            proxyResourceRequest(effectiveBookApi, href, serverUrl).data.decodeToString()
         }
 
         webview.bind("getPublication") { bookId: KomgaBookId ->
-            bookApi.getWebPubManifest(bookId)
+            effectiveBookApi.getWebPubManifest(bookId)
         }
 
         webview.bind<Unit, Unit>("closeBook") { closeWebview() }
@@ -187,7 +202,7 @@ class KomgaEpubReaderState(
                     }
 
                     "http://komelia/favicon.ico" -> null
-                    else -> proxyResourceRequest(bookApi, urlString, serverUrl)
+                    else -> proxyResourceRequest(effectiveBookApi, urlString, serverUrl)
                 }
             }.onFailure { logger.catching(it) }.getOrNull()
         }
@@ -213,12 +228,12 @@ class KomgaEpubReaderState(
         )
     }
 
-    private suspend fun getD2Content(url: String): String? {
+    private suspend fun getD2Content(url: String, effectiveBookApi: KomgaBookApi, serverUrl: StateFlow<String>): String? {
         return runCatching {
             val textResponse = proxyResourceRequest(
-                bookApi = bookApi,
+                bookApi = effectiveBookApi,
                 urlString = url,
-                serverUrl = settingsRepository.getServerUrl()
+                serverUrl = serverUrl
             ).data.decodeToString()
             if (platformType == WEB_KOMF) {
                 val document = Ksoup.parse(textResponse, xmlParser()) //strict xhtml rules

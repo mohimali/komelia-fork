@@ -193,11 +193,19 @@ fun ReaderContent(
             flashDuration = commonReaderState.flashDuration.collectAsState().value
         )
 
-        // Offline reading badge — persistent while reading from local copy
+        // Offline reading badge — auto-hides after 3 seconds
         if (readingOffline != null) {
             val isOffline = readingOffline.collectAsState().value
+            var showBadge by remember { mutableStateOf(isOffline) }
+            LaunchedEffect(isOffline) {
+                if (isOffline) {
+                    showBadge = true
+                    kotlinx.coroutines.delay(3000)
+                    showBadge = false
+                }
+            }
             AnimatedVisibility(
-                visible = isOffline,
+                visible = showBadge,
                 enter = fadeIn(),
                 exit = fadeOut(),
                 modifier = Modifier.align(Alignment.TopEnd).padding(top = 52.dp, end = 8.dp)

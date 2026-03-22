@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -200,7 +201,13 @@ private fun BookImageOverlay(
                     progress = { getReadProgressPercentage(book) },
                     color = MaterialTheme.colorScheme.tertiary,
                     trackColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f),
-                    modifier = Modifier.height(6.dp).fillMaxWidth().background(Color.Black),
+                    modifier = Modifier
+                        .padding(horizontal = 4.dp, vertical = 4.dp)
+                        .height(6.dp)
+                        .fillMaxWidth()
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(percent = 50))
+                        .background(Color.Black),
+                    strokeCap = StrokeCap.Round,
                     drawStopIndicator = {}
                 )
             }
@@ -233,6 +240,7 @@ private fun BookDownloadCardOverlay(book: KomeliaBook) {
                     progress = { event.completed / event.total.toFloat() },
                     color = MaterialTheme.colorScheme.tertiary,
                     trackColor = MaterialTheme.colorScheme.primary,
+                    strokeCap = StrokeCap.Round,
                 )
             }
         }

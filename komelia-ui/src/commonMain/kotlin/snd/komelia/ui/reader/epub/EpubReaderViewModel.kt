@@ -37,6 +37,8 @@ class EpubReaderViewModel(
     private val windowState: AppWindowState,
     private val platformType: PlatformType,
     private val bookSiblingsContext: BookSiblingsContext,
+    private val offlineBookApi: KomgaBookApi? = null,
+    private val isBookAvailableOffline: (suspend (KomgaBookId) -> Boolean)? = null,
 ) : StateScreenModel<LoadState<EpubReaderState>>(LoadState.Uninitialized) {
 
     suspend fun initialize(navigator: Navigator) {
@@ -62,6 +64,8 @@ class EpubReaderViewModel(
                             platformType = platformType,
                             coroutineScope = screenModelScope,
                             bookSiblingsContext = bookSiblingsContext,
+                            offlineBookApi = offlineBookApi,
+                            isBookAvailableOffline = isBookAvailableOffline,
                         )
                         komgaState.initialize(navigator)
                         when (val res = komgaState.state.value) {
@@ -86,6 +90,8 @@ class EpubReaderViewModel(
                             platformType = platformType,
                             coroutineScope = screenModelScope,
                             bookSiblingsContext = bookSiblingsContext,
+                            offlineBookApi = offlineBookApi,
+                            isBookAvailableOffline = isBookAvailableOffline,
                         )
                         ttsuState.initialize(navigator)
                         when (val res = ttsuState.state.value) {
@@ -103,6 +109,7 @@ class EpubReaderViewModel(
 interface EpubReaderState {
     val state: StateFlow<LoadState<Unit>>
     val book: StateFlow<KomeliaBook?>
+    val readingOffline: StateFlow<Boolean>
     suspend fun initialize(navigator: Navigator)
     fun onWebviewCreated(webview: KomeliaWebview)
     fun onBackButtonPress()
