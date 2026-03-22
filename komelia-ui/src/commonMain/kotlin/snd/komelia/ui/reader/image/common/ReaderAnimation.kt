@@ -11,7 +11,7 @@ object ReaderAnimation {
      */
     fun <T> navSpringSpec(density: Float) = spring<T>(
         dampingRatio = Spring.DampingRatioNoBouncy,
-        stiffness = (Spring.StiffnessLow * (2f / density))
-            .coerceIn(Spring.StiffnessVeryLow..Spring.StiffnessMedium)
+        stiffness = (Spring.StiffnessMediumLow * (2f / density))
+            .coerceIn(Spring.StiffnessLow..Spring.StiffnessHigh)
     )
 }

@@ -124,8 +124,12 @@ fun BoxScope.PagedReaderContent(
     }
 
     LaunchedEffect(pagerState.currentPage) {
-        if (pagerState.currentPage < spreads.size) {
-            pagedReaderState.onPageChange(pagerState.currentPage)
+        if (pagerState.currentPage < spreads.size && pagerState.currentPage != currentSpreadIndex) {
+            // Only sync if the pager moved independently (e.g. external input),
+            // not when it's catching up to a user-initiated tap navigation
+            if (!pagerState.isScrollInProgress) {
+                pagedReaderState.onPageChange(pagerState.currentPage)
+            }
         }
     }
 

@@ -5,7 +5,14 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
@@ -48,7 +55,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.StateFlow
 import snd.komelia.ui.common.components.AnimatedDropdownMenu
-import kotlinx.coroutines.launch
 import snd.komelia.settings.model.ReaderTapNavigationMode
 import snd.komelia.settings.model.ReaderType.CONTINUOUS
 import snd.komelia.settings.model.ReaderType.PAGED
@@ -247,7 +253,7 @@ fun ReaderContent(
             LaunchedEffect(isOffline) {
                 if (isOffline) {
                     showBadge = true
-                    kotlinx.coroutines.delay(3000)
+                    delay(3000)
                     showBadge = false
                 }
             }
@@ -310,54 +316,101 @@ fun ReaderControlsOverlay(
                 tapToZoom,
                 onLongPress
             ) {
-                detectTapGestures(
-                    onLongPress = onLongPress,
-                    onTap = { offset ->
-                        val width = contentAreaSize.width.toFloat()
-                        val height = contentAreaSize.height.toFloat()
-                        val actionWidth = width / 3
+                val doubleTapTimeoutMs = viewConfiguration.doubleTapTimeoutMillis
+
+                fun handleNavTap(offset: Offset) {
+                    val width = contentAreaSize.width.toFloat()
+                    val height = contentAreaSize.height.toFloat()
+                    val isLeft = offset.x < width / 3
+                    when (tapNavigationMode) {
+                        ReaderTapNavigationMode.LEFT_RIGHT -> {
+                            if (readingDirection == LayoutDirection.Ltr) {
+                                if (isLeft) prevAction() else nextAction()
+                            } else {
+                                if (isLeft) nextAction() else prevAction()
+                            }
+                        }
+
+                        ReaderTapNavigationMode.RIGHT_LEFT -> {
+                            if (readingDirection == LayoutDirection.Ltr) {
+                                if (isLeft) nextAction() else prevAction()
+                            } else {
+                                if (isLeft) prevAction() else nextAction()
+                            }
+                        }
+
+                        ReaderTapNavigationMode.HORIZONTAL_SPLIT -> {
+                            if (offset.y < height / 2) prevAction() else nextAction()
+                        }
+
+                        ReaderTapNavigationMode.REVERSED_HORIZONTAL_SPLIT -> {
+                            if (offset.y < height / 2) nextAction() else prevAction()
+                        }
+                    }
+                }
+
+                fun isEdgeZone(offset: Offset): Boolean {
+                    val actionWidth = contentAreaSize.width.toFloat() / 3
+                    return offset.x < actionWidth || offset.x > actionWidth * 2
+                }
+
+                fun isCenterZone(offset: Offset): Boolean {
+                    val actionWidth = contentAreaSize.width.toFloat() / 3
+                    return offset.x in actionWidth..actionWidth * 2
+                }
+
+                if (tapToZoom) {
+                    // Custom gesture: instant taps on edges, double-tap timeout only in center
+                    awaitEachGesture {
+                        val down = awaitFirstDown()
+                        val downOffset = down.position
+                        down.consume()
+                        val up = waitForUpOrCancellation() ?: return@awaitEachGesture
+                        up.consume()
+                        val tapOffset = up.position
 
                         if (isSettingsMenuOpen) {
                             onSettingsMenuToggle()
-                            return@detectTapGestures
+                            return@awaitEachGesture
                         }
 
-                        if (offset.x in actionWidth..actionWidth * 2) {
-                            onSettingsMenuToggle()
-                            return@detectTapGestures
-                        }
-
-                        val isLeft = offset.x < actionWidth
-                        when (tapNavigationMode) {
-                            ReaderTapNavigationMode.LEFT_RIGHT -> {
-                                if (readingDirection == LayoutDirection.Ltr) {
-                                    if (isLeft) prevAction() else nextAction()
-                                } else {
-                                    if (isLeft) nextAction() else prevAction()
+                        if (isEdgeZone(tapOffset)) {
+                            // Edge tap: fire immediately, no double-tap wait
+                            handleNavTap(tapOffset)
+                        } else if (isCenterZone(tapOffset)) {
+                            // Center zone: wait for possible double-tap
+                            val secondDown = withTimeoutOrNull(doubleTapTimeoutMs) {
+                                awaitFirstDown()
+                            }
+                            if (secondDown != null) {
+                                secondDown.consume()
+                                val secondUp = waitForUpOrCancellation()
+                                secondUp?.consume()
+                                if (secondUp != null) {
+                                    scaleState.toggleZoom(secondUp.position - areaCenter)
                                 }
-                            }
-
-                            ReaderTapNavigationMode.RIGHT_LEFT -> {
-                                if (readingDirection == LayoutDirection.Ltr) {
-                                    if (isLeft) nextAction() else prevAction()
-                                } else {
-                                    if (isLeft) prevAction() else nextAction()
-                                }
-                            }
-
-                            ReaderTapNavigationMode.HORIZONTAL_SPLIT -> {
-                                if (offset.y < height / 2) prevAction() else nextAction()
-                            }
-
-                            ReaderTapNavigationMode.REVERSED_HORIZONTAL_SPLIT -> {
-                                if (offset.y < height / 2) nextAction() else prevAction()
+                            } else {
+                                onSettingsMenuToggle()
                             }
                         }
-                    },
-                    onDoubleTap = if (tapToZoom) { offset ->
-                        scaleState.toggleZoom(offset - areaCenter)
-                    } else null
-                )
+                    }
+                } else {
+                    // No double-tap: all taps fire instantly
+                    detectTapGestures(
+                        onLongPress = onLongPress,
+                        onTap = { offset ->
+                            if (isSettingsMenuOpen) {
+                                onSettingsMenuToggle()
+                                return@detectTapGestures
+                            }
+                            if (isCenterZone(offset)) {
+                                onSettingsMenuToggle()
+                                return@detectTapGestures
+                            }
+                            handleNavTap(offset)
+                        }
+                    )
+                }
             },
         contentAlignment = Alignment.Center
     ) {
