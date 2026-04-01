@@ -65,7 +65,7 @@ fun CollectionLazyCardGrid(
                     )
             }
 
-            items(collections) {
+            items(collections, key = { it.id.value }) {
                 CollectionImageCard(
                     collection = it,
                     onCollectionClick = { onCollectionClick(it.id) },

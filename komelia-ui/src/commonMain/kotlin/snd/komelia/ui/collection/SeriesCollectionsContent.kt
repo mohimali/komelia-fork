@@ -37,7 +37,7 @@ fun SeriesCollectionsContent(
                 onClick = { onCollectionClick(collection) },
                 label = { CollectionLabel(collection) }
             ) {
-                items(series) { series ->
+                items(series, key = { it.id.value }) { series ->
                     SeriesImageCard(
                         series = series,
                         onSeriesClick = { onSeriesClick(series) },

@@ -227,6 +227,7 @@ class MainScreen(
                                 CompositionLocalProvider(LocalSharedTransitionScope provides this) {
                                     AnimatedContent(
                                         targetState = navigator.lastItem,
+                                        contentKey = { it.key },
                                         transitionSpec = {
                                             val isToImmersive = targetState is BookScreen || targetState is SeriesScreen || targetState is OneshotScreen
                                             val isFromImmersive = initialState is BookScreen || initialState is SeriesScreen || initialState is OneshotScreen

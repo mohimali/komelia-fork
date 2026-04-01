@@ -98,7 +98,12 @@ class SeriesScreen(
                     navigator.parent?.push(readerScreen(book, markProgress))
                 },
                 collectionsState = vm.collectionsState,
-                onCollectionClick = { navigator.push(CollectionScreen(it.id)) },
+                onCollectionClick = { collection ->
+                    val screen = CollectionScreen(collection.id)
+                    val existing = navigator.items.find { it.key == screen.key }
+                    if (existing != null) navigator.popUntil { it.key == screen.key }
+                    else navigator push screen
+                },
                 onSeriesClick = { s ->
                     navigator.push(
                         if (s.oneshot) OneshotScreen(s, BookSiblingsContext.Series())
@@ -143,7 +148,12 @@ class SeriesScreen(
                         },
 
                         collectionsState = vm.collectionsState,
-                        onCollectionClick = { collection -> navigator.push(CollectionScreen(collection.id)) },
+                        onCollectionClick = { collection ->
+                            val screen = CollectionScreen(collection.id)
+                            val existing = navigator.items.find { it.key == screen.key }
+                            if (existing != null) navigator.popUntil { it.key == screen.key }
+                            else navigator push screen
+                        },
                         onSeriesClick = { series ->
                             navigator.push(
                                 if (series.oneshot) OneshotScreen(series, BookSiblingsContext.Series())

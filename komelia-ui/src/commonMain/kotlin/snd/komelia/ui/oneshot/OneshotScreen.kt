@@ -101,7 +101,12 @@ class OneshotScreen(
                 },
                 oneshotMenuActions = vm.bookMenuActions,
                 collections = vm.collectionsState.collections,
-                onCollectionClick = { collection -> navigator.push(CollectionScreen(collection.id)) },
+                onCollectionClick = { collection ->
+                    val screen = CollectionScreen(collection.id)
+                    val existing = navigator.items.find { it.key == screen.key }
+                    if (existing != null) navigator.popUntil { it.key == screen.key }
+                    else navigator push screen
+                },
                 onSeriesClick = { navigator.push(seriesScreen(it)) },
                 readLists = vm.readListsState.readLists,
                 onReadListClick = { navigator.push(ReadListScreen(it.id)) },
@@ -155,7 +160,12 @@ class OneshotScreen(
                     },
                     oneshotMenuActions = vm.bookMenuActions,
                     collections = vm.collectionsState.collections,
-                    onCollectionClick = { collection -> navigator.push(CollectionScreen(collection.id)) },
+                    onCollectionClick = { collection ->
+                        val screen = CollectionScreen(collection.id)
+                        val existing = navigator.items.find { it.key == screen.key }
+                        if (existing != null) navigator.popUntil { it.key == screen.key }
+                        else navigator push screen
+                    },
                     onSeriesClick = { navigator.push(seriesScreen(it)) },
 
                     readLists = vm.readListsState.readLists,

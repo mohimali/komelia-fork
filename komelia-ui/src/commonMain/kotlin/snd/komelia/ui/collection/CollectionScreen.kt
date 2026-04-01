@@ -17,10 +17,13 @@ import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.ReloadableScreen
 import snd.komelia.ui.common.components.LoadingMaxSizeIndicator
 import snd.komelia.ui.platform.BackPressHandler
+import cafe.adriel.voyager.core.screen.ScreenKey
 import snd.komelia.ui.series.seriesScreen
 import snd.komga.client.collection.KomgaCollectionId
 
 class CollectionScreen(val collectionId: KomgaCollectionId) : ReloadableScreen {
+
+    override val key: ScreenKey = collectionId.value
 
     @Composable
     override fun Content() {
@@ -51,7 +54,12 @@ class CollectionScreen(val collectionId: KomgaCollectionId) : ReloadableScreen {
 
                         series = vm.series,
                         seriesActions = vm.seriesMenuActions(),
-                        onSeriesClick = { navigator push seriesScreen(it) },
+                        onSeriesClick = { series ->
+                            val screen = seriesScreen(series)
+                            val existing = navigator.items.find { it.key == screen.key }
+                            if (existing != null) navigator.popUntil { it.key == screen.key }
+                            else navigator push screen
+                        },
 
                         selectedSeries = vm.selectedSeries,
                         onSeriesSelect = vm::onSeriesSelect,
