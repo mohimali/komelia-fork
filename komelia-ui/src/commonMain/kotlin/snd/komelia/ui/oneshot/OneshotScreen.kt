@@ -34,8 +34,10 @@ import kotlin.jvm.Transient
 import snd.komelia.ui.LocalAccentColor
 import snd.komelia.ui.LocalPlatform
 import snd.komelia.ui.LocalUseNewLibraryUI
+import snd.komelia.ui.LocalWindowWidth
 import snd.komelia.ui.oneshot.immersive.ImmersiveOneshotContent
 import snd.komelia.ui.platform.PlatformType
+import snd.komelia.ui.platform.WindowSizeClass
 
 class OneshotScreen(
     val seriesId: KomgaSeriesId,
@@ -79,10 +81,13 @@ class OneshotScreen(
 
         val platform = LocalPlatform.current
         val useNewUI = LocalUseNewLibraryUI.current
+        val windowWidth = LocalWindowWidth.current
         val vmBook = vm.book.collectAsState().value
         val vmSeries = vm.series.collectAsState().value
         val vmLibrary = vm.library.collectAsState().value
-        if (platform == PlatformType.MOBILE && useNewUI && vmSeries != null) {
+        val useImmersive = platform == PlatformType.MOBILE && useNewUI
+                && (windowWidth == WindowSizeClass.COMPACT || windowWidth == WindowSizeClass.MEDIUM)
+        if (useImmersive && vmSeries != null) {
             ImmersiveOneshotContent(
                 series = vmSeries,
                 book = vmBook,

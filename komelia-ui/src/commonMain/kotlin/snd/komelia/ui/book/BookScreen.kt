@@ -30,8 +30,10 @@ import kotlin.jvm.Transient
 import snd.komelia.ui.LocalAccentColor
 import snd.komelia.ui.LocalPlatform
 import snd.komelia.ui.LocalUseNewLibraryUI
+import snd.komelia.ui.LocalWindowWidth
 import snd.komelia.ui.book.immersive.ImmersiveBookContent
 import snd.komelia.ui.platform.PlatformType
+import snd.komelia.ui.platform.WindowSizeClass
 
 fun bookScreen(
     book: KomeliaBook,
@@ -76,7 +78,10 @@ class BookScreen(
 
         val platform = LocalPlatform.current
         val useNewUI = LocalUseNewLibraryUI.current
-        if (platform == PlatformType.MOBILE && useNewUI) {
+        val windowWidth = LocalWindowWidth.current
+        val useImmersive = platform == PlatformType.MOBILE && useNewUI
+                && (windowWidth == WindowSizeClass.COMPACT || windowWidth == WindowSizeClass.MEDIUM)
+        if (useImmersive) {
             val book = vm.book.collectAsState().value ?: return
             val siblings = vm.siblingBooks.collectAsState().value
 

@@ -33,8 +33,10 @@ import kotlin.jvm.Transient
 import snd.komelia.ui.LocalAccentColor
 import snd.komelia.ui.LocalPlatform
 import snd.komelia.ui.LocalUseNewLibraryUI
+import snd.komelia.ui.LocalWindowWidth
 import snd.komelia.ui.series.immersive.ImmersiveSeriesContent
 import snd.komelia.ui.platform.PlatformType
+import snd.komelia.ui.platform.WindowSizeClass
 
 fun seriesScreen(series: KomgaSeries): Screen =
     if (series.oneshot) OneshotScreen(series, BookSiblingsContext.Series())
@@ -81,8 +83,11 @@ class SeriesScreen(
 
         val platform = LocalPlatform.current
         val useNewUI = LocalUseNewLibraryUI.current
+        val windowWidth = LocalWindowWidth.current
         val series = vm.series.collectAsState().value
-        if (platform == PlatformType.MOBILE && useNewUI && series != null) {
+        val useImmersive = platform == PlatformType.MOBILE && useNewUI
+                && (windowWidth == WindowSizeClass.COMPACT || windowWidth == WindowSizeClass.MEDIUM)
+        if (useImmersive && series != null) {
             ImmersiveSeriesContent(
                 series = series,
                 library = vm.library.collectAsState().value,
