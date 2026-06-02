@@ -2,11 +2,9 @@ package snd.komelia.ui.book.immersive
 
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,7 +20,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -82,8 +79,6 @@ import snd.komelia.ui.readlist.BookReadListsContent
 import snd.komga.client.readlist.KomgaReadList
 import snd.komga.client.series.KomgaSeriesId
 import kotlin.math.roundToInt
-
-private val emphasizedAccelerateEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -157,20 +152,6 @@ fun ImmersiveBookContent(
 
     val sharedTransitionScope = LocalSharedTransitionScope.current
 
-    val fabOverlayModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-        with(sharedTransitionScope) {
-            with(animatedVisibilityScope) {
-                Modifier
-                    .renderInSharedTransitionScopeOverlay(zIndexInOverlay = 1f)
-                    .animateEnterExit(
-                        enter = fadeIn(tween(300, delayMillis = 50)),
-                        exit = slideOutVertically(tween(200, easing = emphasizedAccelerateEasing)) { it / 2 }
-                               + fadeOut(tween(150))
-                    )
-            }
-        }
-    } else Modifier
-
     val uiOverlayModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
         with(sharedTransitionScope) {
             with(animatedVisibilityScope) {
@@ -225,7 +206,7 @@ fun ImmersiveBookContent(
                         columns = GridCells.Fixed(1),
                         modifier = Modifier.fillMaxSize(),
                         horizontalArrangement = Arrangement.spacedBy(0.dp),
-                        contentPadding = PaddingValues(bottom = navBarBottom + 80.dp),
+                        contentPadding = PaddingValues(bottom = navBarBottom + 16.dp),
                     ) {
                         // Collapsed stats line (fades out as card expands)
                         item(span = { GridItemSpan(maxLineSpan) }) {
@@ -334,6 +315,17 @@ fun ImmersiveBookContent(
                                     .graphicsLayer { this.alpha = alpha })
                         }
 
+                        // Action buttons (Read Now, Read Incognito, Download)
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            ImmersiveDetailFab(
+                                onReadClick = { onReadBook(selectedBook, true) },
+                                onReadIncognitoClick = { onReadBook(selectedBook, false) },
+                                onDownloadClick = { showDownloadConfirmationDialog = true },
+                                accentColor = accentColor,
+                                showReadActions = true,
+                            )
+                        }
+
                         // Summary
                         if (pageBook.metadata.summary.isNotBlank()) {
                             item {
@@ -423,23 +415,6 @@ fun ImmersiveBookContent(
             }
         }
 
-        // Fixed overlay: FAB (stays still while pager slides)
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .then(fabOverlayModifier)
-                .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(bottom = 16.dp)
-        ) {
-            ImmersiveDetailFab(
-                onReadClick = { onReadBook(selectedBook, true) },
-                onReadIncognitoClick = { onReadBook(selectedBook, false) },
-                onDownloadClick = { showDownloadConfirmationDialog = true },
-                accentColor = accentColor,
-                showReadActions = true,
-            )
-        }
     }
 
     // Two-step download confirmation dialog

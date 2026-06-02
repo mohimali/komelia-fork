@@ -1,11 +1,9 @@
 package snd.komelia.ui.oneshot.immersive
 
 import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,7 +19,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -86,8 +83,6 @@ import snd.komga.client.sse.KomgaEvent.ThumbnailBookEvent
 import snd.komga.client.sse.KomgaEvent.ThumbnailSeriesEvent
 import kotlin.math.roundToInt
 
-private val emphasizedAccelerateEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
-
 private enum class OneshotImmersiveTab { TAGS, COLLECTIONS, READ_LISTS }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -136,20 +131,6 @@ fun ImmersiveOneshotContent(
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
 
-    val fabOverlayModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-        with(sharedTransitionScope) {
-            with(animatedVisibilityScope) {
-                Modifier
-                    .renderInSharedTransitionScopeOverlay(zIndexInOverlay = 1f)
-                    .animateEnterExit(
-                        enter = fadeIn(tween(300, delayMillis = 50)),
-                        exit = slideOutVertically(tween(200, easing = emphasizedAccelerateEasing)) { it / 2 }
-                               + fadeOut(tween(150))
-                    )
-            }
-        }
-    } else Modifier
-
     val uiOverlayModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
         with(sharedTransitionScope) {
             with(animatedVisibilityScope) {
@@ -193,6 +174,9 @@ fun ImmersiveOneshotContent(
                         expandFraction = expandFraction,
                         onLibraryClick = onLibraryClick,
                         onFilterClick = onFilterClick,
+                        onBookReadClick = onBookReadClick,
+                        onBookDownload = { showDownloadConfirmationDialog = true },
+                        accentColor = accentColor,
                         readLists = readLists,
                         onReadListClick = onReadListClick,
                         onReadlistBookClick = onReadlistBookClick,
@@ -250,23 +234,6 @@ fun ImmersiveOneshotContent(
             }
         }
 
-        // Fixed overlay: FAB
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .then(fabOverlayModifier)
-                .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(bottom = 16.dp)
-        ) {
-            ImmersiveDetailFab(
-                onReadClick = { if (book != null) onBookReadClick(true) },
-                onReadIncognitoClick = { if (book != null) onBookReadClick(false) },
-                onDownloadClick = { if (book != null) showDownloadConfirmationDialog = true },
-                accentColor = accentColor,
-                showReadActions = book != null,
-            )
-        }
     }
 
     if (showDownloadConfirmationDialog && book != null) {
@@ -294,6 +261,9 @@ private fun OneshotCardContent(
     expandFraction: Float,
     onLibraryClick: (KomgaLibrary) -> Unit,
     onFilterClick: (SeriesScreenFilter) -> Unit,
+    onBookReadClick: (markReadProgress: Boolean) -> Unit,
+    onBookDownload: () -> Unit,
+    accentColor: Color?,
     readLists: Map<KomgaReadList, List<KomeliaBook>>,
     onReadListClick: (KomgaReadList) -> Unit,
     onReadlistBookClick: (KomeliaBook, KomgaReadList) -> Unit,
@@ -315,7 +285,7 @@ private fun OneshotCardContent(
         columns = GridCells.Fixed(1),
         modifier = Modifier.fillMaxSize(),
         horizontalArrangement = Arrangement.spacedBy(0.dp),
-        contentPadding = PaddingValues(bottom = navBarBottom + 80.dp),
+        contentPadding = PaddingValues(bottom = navBarBottom + 16.dp),
     ) {
         // Collapsed stats line (fades out as card expands)
         item(span = { GridItemSpan(maxLineSpan) }) {
@@ -396,6 +366,17 @@ private fun OneshotCardContent(
                 BookStatsLine(book, Modifier
                     .padding(horizontal = 16.dp, vertical = 4.dp)
                     .graphicsLayer { this.alpha = alpha })
+        }
+
+        // Action buttons (Read Now, Read Incognito, Download)
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            ImmersiveDetailFab(
+                onReadClick = { onBookReadClick(true) },
+                onReadIncognitoClick = { onBookReadClick(false) },
+                onDownloadClick = onBookDownload,
+                accentColor = accentColor,
+                showReadActions = true,
+            )
         }
 
         // SeriesDescriptionRow (library, status, age rating, etc.)

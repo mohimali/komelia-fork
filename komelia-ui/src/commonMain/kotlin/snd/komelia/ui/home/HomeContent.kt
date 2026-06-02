@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -69,6 +70,7 @@ fun HomeContent(
     bookMenuActions: BookMenuActions,
     onBookClick: (KomeliaBook) -> Unit,
     onBookReadClick: (KomeliaBook, Boolean) -> Unit,
+    onEditClick: () -> Unit = {},
 ) {
     val gridState = rememberLazyGridState()
     val columnState = rememberLazyListState()
@@ -91,6 +93,7 @@ fun HomeContent(
                     else gridState.animateScrollToItem(0)
                 }
             },
+            onEditClick = onEditClick,
         )
         DisplayContent(
             filters = filters,
@@ -113,6 +116,7 @@ private fun Toolbar(
     filters: List<HomeFilterData>,
     currentFilterNumber: Int,
     onFilterChange: (Int) -> Unit,
+    onEditClick: () -> Unit = {},
 ) {
     val chipColors = AppFilterChipDefaults.filterChipColors()
     val nonEmptyFilters = remember(filters) {
@@ -123,74 +127,80 @@ private fun Toolbar(
             }
         }
     }
-    Box {
-        val lazyRowState = rememberLazyListState()
-        val coroutineScope = rememberCoroutineScope()
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.weight(1f)) {
+            val lazyRowState = rememberLazyListState()
+            val coroutineScope = rememberCoroutineScope()
 
-        LazyRow(
-            state = lazyRowState,
-            modifier = Modifier.animateContentSize(),
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            item {
-                Spacer(Modifier.width(5.dp))
-            }
-
-            if (filters.size > 1) {
+            LazyRow(
+                state = lazyRowState,
+                modifier = Modifier.animateContentSize(),
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 item {
-                    val selected = currentFilterNumber == 0
-                    FilterChip(
-                        onClick = { onFilterChange(0) },
-                        selected = selected,
-                        label = { Text("All") },
-                        colors = chipColors,
-                        shape = AppFilterChipDefaults.shape(),
-                        border = AppFilterChipDefaults.filterChipBorder(selected),
-                    )
+                    Spacer(Modifier.width(5.dp))
                 }
-            }
-            items(nonEmptyFilters) { data ->
-                val display = remember(data.filter) {
-                    when (data) {
-                        is BookFilterData -> data.books.isNotEmpty()
-                        is SeriesFilterData -> data.series.isNotEmpty()
+
+                if (filters.size > 1) {
+                    item {
+                        val selected = currentFilterNumber == 0
+                        FilterChip(
+                            onClick = { onFilterChange(0) },
+                            selected = selected,
+                            label = { Text("All") },
+                            colors = chipColors,
+                            shape = AppFilterChipDefaults.shape(),
+                            border = AppFilterChipDefaults.filterChipBorder(selected),
+                        )
                     }
                 }
-                if (display) {
-                    val selected = currentFilterNumber == data.filter.order || filters.size == 1
-                    FilterChip(
-                        onClick = { onFilterChange(data.filter.order) },
-                        selected = selected,
-                        label = { Text(data.filter.label) },
-                        colors = chipColors,
-                        shape = AppFilterChipDefaults.shape(),
-                        border = AppFilterChipDefaults.filterChipBorder(selected),
-                    )
+                items(nonEmptyFilters) { data ->
+                    val display = remember(data.filter) {
+                        when (data) {
+                            is BookFilterData -> data.books.isNotEmpty()
+                            is SeriesFilterData -> data.series.isNotEmpty()
+                        }
+                    }
+                    if (display) {
+                        val selected = currentFilterNumber == data.filter.order || filters.size == 1
+                        FilterChip(
+                            onClick = { onFilterChange(data.filter.order) },
+                            selected = selected,
+                            label = { Text(data.filter.label) },
+                            colors = chipColors,
+                            shape = AppFilterChipDefaults.shape(),
+                            border = AppFilterChipDefaults.filterChipBorder(selected),
+                        )
+                    }
+                }
+            }
+
+            if (LocalPlatform.current != PlatformType.MOBILE) {
+                Row {
+                    if (lazyRowState.canScrollBackward) {
+                        IconButton(
+                            colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.surface),
+                            onClick = { coroutineScope.launch { lazyRowState.animateScrollBy(-200.0f) } },
+                        ) {
+                            Icon(Icons.Default.ChevronLeft, null)
+                        }
+                    }
+                    Spacer(Modifier.weight(1f))
+                    if (lazyRowState.canScrollForward) {
+                        IconButton(
+                            colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.surface),
+                            onClick = { coroutineScope.launch { lazyRowState.animateScrollBy(200.0f) } },
+                        ) {
+                            Icon(Icons.Default.ChevronRight, null)
+                        }
+                    }
                 }
             }
         }
 
-        if (LocalPlatform.current != PlatformType.MOBILE) {
-            Row {
-                if (lazyRowState.canScrollBackward) {
-                    IconButton(
-                        colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.surface),
-                        onClick = { coroutineScope.launch { lazyRowState.animateScrollBy(-200.0f) } },
-                    ) {
-                        Icon(Icons.Default.ChevronLeft, null)
-                    }
-                }
-                Spacer(Modifier.weight(1f))
-                if (lazyRowState.canScrollForward) {
-                    IconButton(
-                        colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.surface),
-                        onClick = { coroutineScope.launch { lazyRowState.animateScrollBy(200.0f) } },
-                    ) {
-                        Icon(Icons.Default.ChevronRight, null)
-                    }
-                }
-            }
+        IconButton(onClick = onEditClick) {
+            Icon(Icons.Rounded.Edit, contentDescription = "Edit filters")
         }
     }
 }

@@ -235,15 +235,7 @@ fun ImmersiveSeriesContent(
                 }
             }
         },
-        fabContent = {
-            ImmersiveDetailFab(
-                onReadClick = { firstUnreadBook?.let { onBookReadClick(it, true) } },
-                onReadIncognitoClick = { firstUnreadBook?.let { onBookReadClick(it, false) } },
-                onDownloadClick = { showDownloadConfirmationDialog = true },
-                accentColor = accentColor,
-                showReadActions = false,
-            )
-        },
+        fabContent = {},
         cardContent = { expandFraction ->
             val thumbnailOffset = (126.dp * expandFraction).coerceAtLeast(0.dp)
 
@@ -258,7 +250,7 @@ fun ImmersiveSeriesContent(
                 state = scrollState,
                 columns = GridCells.Adaptive(gridMinWidth),
                 horizontalArrangement = Arrangement.spacedBy(15.dp),
-                contentPadding = PaddingValues(start = 10.dp, end = 10.dp, bottom = navBarBottom + 80.dp),
+                contentPadding = PaddingValues(start = 10.dp, end = 10.dp, bottom = navBarBottom + 16.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 // Title + writers in a single item whose minimum height equals the thumbnail
@@ -337,6 +329,17 @@ fun ImmersiveSeriesContent(
                             modifier = Modifier.padding(horizontal = 16.dp),
                         )
                     }
+                }
+
+                // Action buttons (Download)
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    ImmersiveDetailFab(
+                        onReadClick = { firstUnreadBook?.let { onBookReadClick(it, true) } },
+                        onReadIncognitoClick = { firstUnreadBook?.let { onBookReadClick(it, false) } },
+                        onDownloadClick = { showDownloadConfirmationDialog = true },
+                        accentColor = accentColor,
+                        showReadActions = false,
+                    )
                 }
 
                 // Summary — full width

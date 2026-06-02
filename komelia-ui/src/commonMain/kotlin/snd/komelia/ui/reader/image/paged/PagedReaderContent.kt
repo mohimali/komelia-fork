@@ -33,6 +33,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import snd.komelia.image.ReaderImageResult
 import snd.komelia.settings.model.PageDisplayLayout.DOUBLE_PAGES
@@ -105,14 +106,19 @@ fun BoxScope.PagedReaderContent(
 
     val coroutineScope = rememberCoroutineScope()
     LaunchedEffect(Unit) {
+        var animationJob: Job? = null
         pagedReaderState.pageNavigationEvents.collect { event ->
             if (pagerState.currentPage != event.pageIndex) {
+                // Cancel any in-progress page animation so rapid taps feel instant
+                animationJob?.cancel()
                 when (event) {
                     is PagedReaderState.PageNavigationEvent.Animated -> {
-                        pagerState.animateScrollToPage(
-                            page = event.pageIndex,
-                            animationSpec = ReaderAnimation.navSpringSpec(density)
-                        )
+                        animationJob = launch {
+                            pagerState.animateScrollToPage(
+                                page = event.pageIndex,
+                                animationSpec = ReaderAnimation.navSpringSpec(density)
+                            )
+                        }
                     }
 
                     is PagedReaderState.PageNavigationEvent.Immediate -> {

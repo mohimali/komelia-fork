@@ -102,7 +102,10 @@ class PagedReaderState(
     val tapToZoom = MutableStateFlow(true)
     val adaptiveBackground = MutableStateFlow(false)
 
-    val pageNavigationEvents = MutableSharedFlow<PageNavigationEvent>(extraBufferCapacity = 1)
+    val pageNavigationEvents = MutableSharedFlow<PageNavigationEvent>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST,
+    )
 
     suspend fun initialize() {
         layout.value = settingsRepository.getPagedReaderDisplayLayout().first()
