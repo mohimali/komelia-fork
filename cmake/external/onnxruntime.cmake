@@ -11,6 +11,7 @@ else ()
         # WebGPU with static Dawn
         set(ONNXRUNTIME_BUILD_PARAMS
                 -Donnxruntime_USE_WEBGPU=ON
+                -Donnxruntime_BUILD_WEBGPU_EP_STATIC_LIB=ON
                 -Donnxruntime_WGSL_TEMPLATE=static
                 -Donnxruntime_BUILD_DAWN_SHARED_LIBRARY=OFF
         )
@@ -19,8 +20,9 @@ else ()
 
     ExternalProject_Add(ep_onnxruntime
             GIT_REPOSITORY https://github.com/microsoft/onnxruntime
-            GIT_TAG v1.23.0
+            GIT_TAG v1.25.0
             GIT_PROGRESS 1
+            UPDATE_DISCONNECTED True
             SOURCE_SUBDIR cmake
             CMAKE_ARGS
                 ${EP_CMAKE_ARGS}

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberBasicTooltipState
 import androidx.compose.foundation.rememberScrollState
@@ -97,6 +98,7 @@ fun NavBarContent(
 
 @Composable
 fun LibrariesNavBarContent(
+    modifier: Modifier,
     currentScreen: Screen,
     libraries: List<KomgaLibrary>,
     libraryActions: LibraryMenuActions,
@@ -106,8 +108,7 @@ fun LibrariesNavBarContent(
     Surface(Modifier.width(230.dp)) {
         val scrollState: ScrollState = rememberScrollState()
         Column(
-            modifier = Modifier
-                .padding(top = 20.dp)
+            modifier = modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
         ) {
@@ -119,6 +120,7 @@ fun LibrariesNavBarContent(
                 onLibrariesClick = onLibrariesClick,
                 onLibraryClick = onLibraryClick
             )
+            Spacer(Modifier.size(30.dp))
         }
     }
 

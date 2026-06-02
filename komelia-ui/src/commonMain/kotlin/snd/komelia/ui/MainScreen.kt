@@ -209,7 +209,18 @@ class MainScreen(
                 val layoutDirection = LocalLayoutDirection.current
                 ModalNavigationDrawer(
                     drawerState = vm.navBarState,
-                    drawerContent = { LibrariesNavBar(vm, navigator) },
+                    drawerContent = {
+                        LibrariesNavBar(
+                            modifier = Modifier.padding(
+                                start = paddingValues.calculateStartPadding(layoutDirection),
+                                end = paddingValues.calculateEndPadding(layoutDirection),
+                                top = paddingValues.calculateTopPadding(),
+                                bottom = paddingValues.calculateBottomPadding(),
+                            ).consumeWindowInsets(paddingValues),
+                            vm = vm,
+                            navigator = navigator
+                        )
+                    },
                     content = {
                         Box(
                             Modifier
@@ -431,11 +442,13 @@ class MainScreen(
 
     @Composable
     private fun LibrariesNavBar(
+        modifier: Modifier,
         vm: MainScreenViewModel,
         navigator: Navigator,
     ) {
         val coroutineScope = rememberCoroutineScope()
         LibrariesNavBarContent(
+            modifier = modifier,
             currentScreen = navigator.lastItem,
             libraries = vm.libraries.collectAsState().value,
             libraryActions = vm.getLibraryActions(),
